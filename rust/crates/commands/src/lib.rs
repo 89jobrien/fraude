@@ -7,7 +7,7 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use plugins::{PluginError, PluginManager, PluginSummary};
-use runtime::{compact_session, CompactionConfig, Session};
+use runtime::{CompactionConfig, Session, compact_session};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandManifestEntry {
@@ -777,14 +777,19 @@ pub fn handle_plugins_slash_command(
                 message: format!(
                     "Plugins\n  Result           updated {}\n  Name             {}\n  Old version      {}\n  New version      {}\n  Status           {}",
                     update.plugin_id,
-                    plugin
-                        .as_ref()
-                        .map_or_else(|| update.plugin_id.clone(), |plugin| plugin.metadata.name.clone()),
+                    plugin.as_ref().map_or_else(
+                        || update.plugin_id.clone(),
+                        |plugin| plugin.metadata.name.clone()
+                    ),
                     update.old_version,
                     update.new_version,
                     plugin
                         .as_ref()
-                        .map_or("unknown", |plugin| if plugin.enabled { "enabled" } else { "disabled" }),
+                        .map_or("unknown", |plugin| if plugin.enabled {
+                            "enabled"
+                        } else {
+                            "disabled"
+                        }),
                 ),
                 reload_runtime: true,
             })
@@ -1058,15 +1063,14 @@ pub fn handle_commit_push_pr_slash_command(
 }
 
 pub fn detect_default_branch(cwd: &Path) -> io::Result<String> {
-    if let Ok(reference) = git_stdout(cwd, &["symbolic-ref", "refs/remotes/origin/HEAD"]) {
-        if let Some(branch) = reference
+    if let Ok(reference) = git_stdout(cwd, &["symbolic-ref", "refs/remotes/origin/HEAD"])
+        && let Some(branch) = reference
             .trim()
             .rsplit('/')
             .next()
             .filter(|value| !value.is_empty())
-        {
-            return Ok(branch.to_string());
-        }
+    {
+        return Ok(branch.to_string());
     }
 
     for branch in ["main", "master"] {
@@ -1786,15 +1790,16 @@ pub fn handle_slash_command(
 }
 
 #[cfg(test)]
+#[allow(unsafe_code)]
 mod tests {
     use super::{
+        CommitPushPrRequest, DefinitionSource, SkillOrigin, SkillRoot, SlashCommand,
         handle_branch_slash_command, handle_commit_push_pr_slash_command,
         handle_commit_slash_command, handle_plugins_slash_command, handle_slash_command,
         handle_worktree_slash_command, load_agents_from_roots, load_skills_from_roots,
         render_agents_report, render_plugins_report, render_skills_report,
         render_slash_command_help, resume_supported_slash_commands, slash_command_specs,
-        suggest_slash_commands, CommitPushPrRequest, DefinitionSource, SkillOrigin, SkillRoot,
-        SlashCommand,
+        suggest_slash_commands,
     };
     use plugins::{PluginKind, PluginManager, PluginManagerConfig, PluginMetadata, PluginSummary};
     use runtime::{CompactionConfig, ContentBlock, ConversationMessage, MessageRole, Session};
@@ -2208,12 +2213,14 @@ mod tests {
             handle_slash_command("/worktree list", &session, CompactionConfig::default()).is_none()
         );
         assert!(handle_slash_command("/commit", &session, CompactionConfig::default()).is_none());
-        assert!(handle_slash_command(
-            "/commit-push-pr review notes",
-            &session,
-            CompactionConfig::default()
-        )
-        .is_none());
+        assert!(
+            handle_slash_command(
+                "/commit-push-pr review notes",
+                &session,
+                CompactionConfig::default()
+            )
+            .is_none()
+        );
         assert!(handle_slash_command("/pr", &session, CompactionConfig::default()).is_none());
         assert!(handle_slash_command("/issue", &session, CompactionConfig::default()).is_none());
         assert!(
@@ -2229,24 +2236,28 @@ mod tests {
         assert!(
             handle_slash_command("/model sonnet", &session, CompactionConfig::default()).is_none()
         );
-        assert!(handle_slash_command(
-            "/permissions read-only",
-            &session,
-            CompactionConfig::default()
-        )
-        .is_none());
+        assert!(
+            handle_slash_command(
+                "/permissions read-only",
+                &session,
+                CompactionConfig::default()
+            )
+            .is_none()
+        );
         assert!(handle_slash_command("/clear", &session, CompactionConfig::default()).is_none());
         assert!(
             handle_slash_command("/clear --confirm", &session, CompactionConfig::default())
                 .is_none()
         );
         assert!(handle_slash_command("/cost", &session, CompactionConfig::default()).is_none());
-        assert!(handle_slash_command(
-            "/resume session.json",
-            &session,
-            CompactionConfig::default()
-        )
-        .is_none());
+        assert!(
+            handle_slash_command(
+                "/resume session.json",
+                &session,
+                CompactionConfig::default()
+            )
+            .is_none()
+        );
         assert!(handle_slash_command("/config", &session, CompactionConfig::default()).is_none());
         assert!(
             handle_slash_command("/config env", &session, CompactionConfig::default()).is_none()
@@ -2621,9 +2632,9 @@ mod tests {
             new_path.push(':');
             new_path.push_str(&path.to_string_lossy());
         }
-        env::set_var("PATH", &new_path);
+        unsafe { env::set_var("PATH", &new_path) };
         let previous_safeuser = env::var_os("SAFEUSER");
-        env::set_var("SAFEUSER", "tester");
+        unsafe { env::set_var("SAFEUSER", "tester") };
 
         let request = CommitPushPrRequest {
             commit_message: Some("feat: add feature file".to_string()),
@@ -2647,15 +2658,17 @@ mod tests {
         assert!(gh_invocations.contains("pr create"));
         assert!(gh_invocations.contains("--base main"));
 
-        if let Some(path) = previous_path {
-            env::set_var("PATH", path);
-        } else {
-            env::remove_var("PATH");
-        }
-        if let Some(safeuser) = previous_safeuser {
-            env::set_var("SAFEUSER", safeuser);
-        } else {
-            env::remove_var("SAFEUSER");
+        unsafe {
+            if let Some(path) = previous_path {
+                env::set_var("PATH", path);
+            } else {
+                env::remove_var("PATH");
+            }
+            if let Some(safeuser) = previous_safeuser {
+                env::set_var("SAFEUSER", safeuser);
+            } else {
+                env::remove_var("SAFEUSER");
+            }
         }
 
         let _ = fs::remove_dir_all(repo);

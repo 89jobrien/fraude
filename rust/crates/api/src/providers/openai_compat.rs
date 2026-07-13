@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, VecDeque};
 use std::time::Duration;
 
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::error::ApiError;
 use crate::types::{
@@ -431,13 +431,13 @@ impl StreamState {
         }
 
         for state in self.tool_calls.values_mut() {
-            if !state.started {
-                if let Some(start_event) = state.start_event()? {
-                    state.started = true;
-                    events.push(StreamEvent::ContentBlockStart(start_event));
-                    if let Some(delta_event) = state.delta_event() {
-                        events.push(StreamEvent::ContentBlockDelta(delta_event));
-                    }
+            if !state.started
+                && let Some(start_event) = state.start_event()?
+            {
+                state.started = true;
+                events.push(StreamEvent::ContentBlockStart(start_event));
+                if let Some(delta_event) = state.delta_event() {
+                    events.push(StreamEvent::ContentBlockDelta(delta_event));
                 }
             }
             if state.started && !state.stopped {
@@ -500,6 +500,7 @@ impl ToolCallState {
         self.openai_index + 1
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn start_event(&self) -> Result<Option<ContentBlockStartEvent>, ApiError> {
         let Some(name) = self.name.clone() else {
             return Ok(None);
@@ -928,19 +929,17 @@ trait StringExt {
 
 impl StringExt for String {
     fn if_empty_then(self, fallback: String) -> String {
-        if self.is_empty() {
-            fallback
-        } else {
-            self
-        }
+        if self.is_empty() { fallback } else { self }
     }
 }
 
 #[cfg(test)]
+#[allow(unsafe_code)]
 mod tests {
     use super::{
-        build_chat_completion_request, chat_completions_endpoint, normalize_finish_reason,
-        openai_tool_choice, parse_tool_arguments, OpenAiCompatClient, OpenAiCompatConfig,
+        OpenAiCompatClient, OpenAiCompatConfig, build_chat_completion_request,
+        chat_completions_endpoint, normalize_finish_reason, openai_tool_choice,
+        parse_tool_arguments,
     };
     use crate::error::ApiError;
     use crate::types::{
@@ -1010,7 +1009,7 @@ mod tests {
     #[test]
     fn missing_xai_api_key_is_provider_specific() {
         let _lock = env_lock();
-        std::env::remove_var("XAI_API_KEY");
+        unsafe { std::env::remove_var("XAI_API_KEY") };
         let error = OpenAiCompatClient::from_env(OpenAiCompatConfig::xai())
             .expect_err("missing key should error");
         assert!(matches!(

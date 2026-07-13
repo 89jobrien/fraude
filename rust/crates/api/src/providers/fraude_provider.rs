@@ -2,8 +2,8 @@ use std::collections::VecDeque;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use runtime::{
-    load_oauth_credentials, save_oauth_credentials, OAuthConfig, OAuthRefreshRequest,
-    OAuthTokenExchangeRequest,
+    OAuthConfig, OAuthRefreshRequest, OAuthTokenExchangeRequest, load_oauth_credentials,
+    save_oauth_credentials,
 };
 use serde::Deserialize;
 
@@ -640,6 +640,7 @@ struct ApiErrorBody {
 }
 
 #[cfg(test)]
+#[allow(unsafe_code)]
 mod tests {
     use super::{ALT_REQUEST_ID_HEADER, REQUEST_ID_HEADER};
     use std::io::{Read, Write};
@@ -648,11 +649,11 @@ mod tests {
     use std::thread;
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-    use runtime::{clear_oauth_credentials, save_oauth_credentials, OAuthConfig};
+    use runtime::{OAuthConfig, clear_oauth_credentials, save_oauth_credentials};
 
     use super::{
-        now_unix_timestamp, oauth_token_is_expired, resolve_saved_oauth_token,
-        resolve_startup_auth_source, AuthSource, FraudeApiClient, OAuthTokenSet,
+        AuthSource, FraudeApiClient, OAuthTokenSet, now_unix_timestamp, oauth_token_is_expired,
+        resolve_saved_oauth_token, resolve_startup_auth_source,
     };
     use crate::types::{ContentBlockDelta, MessageRequest};
 
@@ -715,9 +716,9 @@ mod tests {
     #[test]
     fn read_api_key_requires_presence() {
         let _guard = env_lock();
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
-        std::env::remove_var("FRAUDE_CONFIG_HOME");
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
+        unsafe { std::env::remove_var("FRAUDE_CONFIG_HOME") };
         let error = super::read_api_key().expect_err("missing key should error");
         assert!(matches!(
             error,
@@ -728,35 +729,35 @@ mod tests {
     #[test]
     fn read_api_key_requires_non_empty_value() {
         let _guard = env_lock();
-        std::env::set_var("ANTHROPIC_AUTH_TOKEN", "");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::set_var("ANTHROPIC_AUTH_TOKEN", "") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
         let error = super::read_api_key().expect_err("empty key should error");
         assert!(matches!(
             error,
             crate::error::ApiError::MissingCredentials { .. }
         ));
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
     }
 
     #[test]
     fn read_api_key_prefers_api_key_env() {
         let _guard = env_lock();
-        std::env::set_var("ANTHROPIC_AUTH_TOKEN", "auth-token");
-        std::env::set_var("ANTHROPIC_API_KEY", "legacy-key");
+        unsafe { std::env::set_var("ANTHROPIC_AUTH_TOKEN", "auth-token") };
+        unsafe { std::env::set_var("ANTHROPIC_API_KEY", "legacy-key") };
         assert_eq!(
             super::read_api_key().expect("api key should load"),
             "legacy-key"
         );
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
     }
 
     #[test]
     fn read_auth_token_reads_auth_token_env() {
         let _guard = env_lock();
-        std::env::set_var("ANTHROPIC_AUTH_TOKEN", "auth-token");
+        unsafe { std::env::set_var("ANTHROPIC_AUTH_TOKEN", "auth-token") };
         assert_eq!(super::read_auth_token().as_deref(), Some("auth-token"));
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
     }
 
     #[test]
@@ -774,22 +775,22 @@ mod tests {
     #[test]
     fn auth_source_from_env_combines_api_key_and_bearer_token() {
         let _guard = env_lock();
-        std::env::set_var("ANTHROPIC_AUTH_TOKEN", "auth-token");
-        std::env::set_var("ANTHROPIC_API_KEY", "legacy-key");
+        unsafe { std::env::set_var("ANTHROPIC_AUTH_TOKEN", "auth-token") };
+        unsafe { std::env::set_var("ANTHROPIC_API_KEY", "legacy-key") };
         let auth = AuthSource::from_env().expect("env auth");
         assert_eq!(auth.api_key(), Some("legacy-key"));
         assert_eq!(auth.bearer_token(), Some("auth-token"));
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
     }
 
     #[test]
     fn auth_source_from_saved_oauth_when_env_absent() {
         let _guard = env_lock();
         let config_home = temp_config_home();
-        std::env::set_var("FRAUDE_CONFIG_HOME", &config_home);
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::set_var("FRAUDE_CONFIG_HOME", &config_home) };
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
         save_oauth_credentials(&runtime::OAuthTokenSet {
             access_token: "saved-access-token".to_string(),
             refresh_token: Some("refresh".to_string()),
@@ -802,7 +803,7 @@ mod tests {
         assert_eq!(auth.bearer_token(), Some("saved-access-token"));
 
         clear_oauth_credentials().expect("clear credentials");
-        std::env::remove_var("FRAUDE_CONFIG_HOME");
+        unsafe { std::env::remove_var("FRAUDE_CONFIG_HOME") };
         cleanup_temp_config_home(&config_home);
     }
 
@@ -826,9 +827,9 @@ mod tests {
     fn resolve_saved_oauth_token_refreshes_expired_credentials() {
         let _guard = env_lock();
         let config_home = temp_config_home();
-        std::env::set_var("FRAUDE_CONFIG_HOME", &config_home);
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::set_var("FRAUDE_CONFIG_HOME", &config_home) };
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
         save_oauth_credentials(&runtime::OAuthTokenSet {
             access_token: "expired-access-token".to_string(),
             refresh_token: Some("refresh-token".to_string()),
@@ -850,7 +851,7 @@ mod tests {
         assert_eq!(stored.access_token, "refreshed-token");
 
         clear_oauth_credentials().expect("clear credentials");
-        std::env::remove_var("FRAUDE_CONFIG_HOME");
+        unsafe { std::env::remove_var("FRAUDE_CONFIG_HOME") };
         cleanup_temp_config_home(&config_home);
     }
 
@@ -858,9 +859,9 @@ mod tests {
     fn resolve_startup_auth_source_uses_saved_oauth_without_loading_config() {
         let _guard = env_lock();
         let config_home = temp_config_home();
-        std::env::set_var("FRAUDE_CONFIG_HOME", &config_home);
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::set_var("FRAUDE_CONFIG_HOME", &config_home) };
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
         save_oauth_credentials(&runtime::OAuthTokenSet {
             access_token: "saved-access-token".to_string(),
             refresh_token: Some("refresh".to_string()),
@@ -874,7 +875,7 @@ mod tests {
         assert_eq!(auth.bearer_token(), Some("saved-access-token"));
 
         clear_oauth_credentials().expect("clear credentials");
-        std::env::remove_var("FRAUDE_CONFIG_HOME");
+        unsafe { std::env::remove_var("FRAUDE_CONFIG_HOME") };
         cleanup_temp_config_home(&config_home);
     }
 
@@ -882,9 +883,9 @@ mod tests {
     fn resolve_startup_auth_source_errors_when_refreshable_token_lacks_config() {
         let _guard = env_lock();
         let config_home = temp_config_home();
-        std::env::set_var("FRAUDE_CONFIG_HOME", &config_home);
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::set_var("FRAUDE_CONFIG_HOME", &config_home) };
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
         save_oauth_credentials(&runtime::OAuthTokenSet {
             access_token: "expired-access-token".to_string(),
             refresh_token: Some("refresh-token".to_string()),
@@ -906,7 +907,7 @@ mod tests {
         assert_eq!(stored.refresh_token.as_deref(), Some("refresh-token"));
 
         clear_oauth_credentials().expect("clear credentials");
-        std::env::remove_var("FRAUDE_CONFIG_HOME");
+        unsafe { std::env::remove_var("FRAUDE_CONFIG_HOME") };
         cleanup_temp_config_home(&config_home);
     }
 
@@ -914,9 +915,9 @@ mod tests {
     fn resolve_saved_oauth_token_preserves_refresh_token_when_refresh_response_omits_it() {
         let _guard = env_lock();
         let config_home = temp_config_home();
-        std::env::set_var("FRAUDE_CONFIG_HOME", &config_home);
-        std::env::remove_var("ANTHROPIC_AUTH_TOKEN");
-        std::env::remove_var("ANTHROPIC_API_KEY");
+        unsafe { std::env::set_var("FRAUDE_CONFIG_HOME", &config_home) };
+        unsafe { std::env::remove_var("ANTHROPIC_AUTH_TOKEN") };
+        unsafe { std::env::remove_var("ANTHROPIC_API_KEY") };
         save_oauth_credentials(&runtime::OAuthTokenSet {
             access_token: "expired-access-token".to_string(),
             refresh_token: Some("refresh-token".to_string()),
@@ -939,7 +940,7 @@ mod tests {
         assert_eq!(stored.refresh_token.as_deref(), Some("refresh-token"));
 
         clear_oauth_credentials().expect("clear credentials");
-        std::env::remove_var("FRAUDE_CONFIG_HOME");
+        unsafe { std::env::remove_var("FRAUDE_CONFIG_HOME") };
         cleanup_temp_config_home(&config_home);
     }
 

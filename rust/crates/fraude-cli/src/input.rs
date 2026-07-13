@@ -347,7 +347,7 @@ impl LineEditor {
                 buffer.pop();
             }
 
-            if self.handle_submission(&buffer) == Submission::ToggleVim {
+            if Self::handle_submission(&buffer) == Submission::ToggleVim {
                 self.vim_enabled = !self.vim_enabled;
                 writeln!(
                     stdout,
@@ -372,24 +372,24 @@ impl LineEditor {
 
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             match key.code {
-                KeyCode::Char('c') | KeyCode::Char('C') => {
+                KeyCode::Char('c' | 'C') => {
                     return if session.has_input() {
                         KeyAction::Cancel
                     } else {
                         KeyAction::Exit
                     };
                 }
-                KeyCode::Char('j') | KeyCode::Char('J') => {
+                KeyCode::Char('j' | 'J') => {
                     if session.mode != EditorMode::Normal && session.mode != EditorMode::Visual {
-                        self.insert_active_text(session, "\n");
+                        Self::insert_active_text(session, "\n");
                     }
                     return KeyAction::Continue;
                 }
-                KeyCode::Char('d') | KeyCode::Char('D') => {
+                KeyCode::Char('d' | 'D') => {
                     if session.current_len() == 0 {
                         return KeyAction::Exit;
                     }
-                    self.delete_char_under_cursor(session);
+                    Self::delete_char_under_cursor(session);
                     return KeyAction::Continue;
                 }
                 _ => {}
@@ -399,26 +399,26 @@ impl LineEditor {
         match key.code {
             KeyCode::Enter if key.modifiers.contains(KeyModifiers::SHIFT) => {
                 if session.mode != EditorMode::Normal && session.mode != EditorMode::Visual {
-                    self.insert_active_text(session, "\n");
+                    Self::insert_active_text(session, "\n");
                 }
                 KeyAction::Continue
             }
-            KeyCode::Enter => self.submit_or_toggle(session),
-            KeyCode::Esc => self.handle_escape(session),
+            KeyCode::Enter => Self::submit_or_toggle(session),
+            KeyCode::Esc => Self::handle_escape(session),
             KeyCode::Backspace => {
-                self.handle_backspace(session);
+                Self::handle_backspace(session);
                 KeyAction::Continue
             }
             KeyCode::Delete => {
-                self.delete_char_under_cursor(session);
+                Self::delete_char_under_cursor(session);
                 KeyAction::Continue
             }
             KeyCode::Left => {
-                self.move_left(session);
+                Self::move_left(session);
                 KeyAction::Continue
             }
             KeyCode::Right => {
-                self.move_right(session);
+                Self::move_right(session);
                 KeyAction::Continue
             }
             KeyCode::Up => {
@@ -430,11 +430,11 @@ impl LineEditor {
                 KeyAction::Continue
             }
             KeyCode::Home => {
-                self.move_line_start(session);
+                Self::move_line_start(session);
                 KeyAction::Continue
             }
             KeyCode::End => {
-                self.move_line_end(session);
+                Self::move_line_end(session);
                 KeyAction::Continue
             }
             KeyCode::Tab => {
@@ -451,11 +451,11 @@ impl LineEditor {
 
     fn handle_char(&mut self, session: &mut EditSession, ch: char) {
         match session.mode {
-            EditorMode::Plain => self.insert_active_char(session, ch),
-            EditorMode::Insert => self.insert_active_char(session, ch),
             EditorMode::Normal => self.handle_normal_char(session, ch),
-            EditorMode::Visual => self.handle_visual_char(session, ch),
-            EditorMode::Command => self.insert_active_char(session, ch),
+            EditorMode::Visual => Self::handle_visual_char(session, ch),
+            EditorMode::Plain | EditorMode::Insert | EditorMode::Command => {
+                Self::insert_active_char(session, ch);
+            }
         }
     }
 
@@ -475,10 +475,10 @@ impl LineEditor {
         }
 
         match ch {
-            'h' => self.move_left(session),
-            'j' => self.move_down(session),
-            'k' => self.move_up(session),
-            'l' => self.move_right(session),
+            'h' => Self::move_left(session),
+            'j' => Self::move_down(session),
+            'k' => Self::move_up(session),
+            'l' => Self::move_right(session),
             'd' | 'y' => session.pending_operator = Some(ch),
             'p' => self.paste_after(session),
             'i' => session.enter_insert_mode(),
@@ -488,20 +488,20 @@ impl LineEditor {
         }
     }
 
-    fn handle_visual_char(&mut self, session: &mut EditSession, ch: char) {
+    fn handle_visual_char(session: &mut EditSession, ch: char) {
         match ch {
-            'h' => self.move_left(session),
-            'j' => self.move_down(session),
-            'k' => self.move_up(session),
-            'l' => self.move_right(session),
+            'h' => Self::move_left(session),
+            'j' => Self::move_down(session),
+            'k' => Self::move_up(session),
+            'l' => Self::move_right(session),
             'v' => session.enter_normal_mode(),
             _ => {}
         }
     }
 
-    fn handle_escape(&mut self, session: &mut EditSession) -> KeyAction {
+    fn handle_escape(session: &mut EditSession) -> KeyAction {
         match session.mode {
-            EditorMode::Plain => KeyAction::Continue,
+            EditorMode::Plain | EditorMode::Normal => KeyAction::Continue,
             EditorMode::Insert => {
                 if session.cursor > 0 {
                     session.cursor = previous_boundary(&session.text, session.cursor);
@@ -509,7 +509,6 @@ impl LineEditor {
                 session.enter_normal_mode();
                 KeyAction::Continue
             }
-            EditorMode::Normal => KeyAction::Continue,
             EditorMode::Visual => {
                 session.enter_normal_mode();
                 KeyAction::Continue
@@ -521,9 +520,9 @@ impl LineEditor {
         }
     }
 
-    fn handle_backspace(&mut self, session: &mut EditSession) {
+    fn handle_backspace(session: &mut EditSession) {
         match session.mode {
-            EditorMode::Normal | EditorMode::Visual => self.move_left(session),
+            EditorMode::Normal | EditorMode::Visual => Self::move_left(session),
             EditorMode::Command => {
                 if session.command_cursor <= 1 {
                     session.exit_command_mode();
@@ -537,15 +536,15 @@ impl LineEditor {
         }
     }
 
-    fn submit_or_toggle(&mut self, session: &EditSession) -> KeyAction {
+    fn submit_or_toggle(session: &EditSession) -> KeyAction {
         let line = session.current_line();
-        match self.handle_submission(&line) {
+        match Self::handle_submission(&line) {
             Submission::Submit => KeyAction::Submit(line),
             Submission::ToggleVim => KeyAction::ToggleVim,
         }
     }
 
-    fn handle_submission(&mut self, line: &str) -> Submission {
+    fn handle_submission(line: &str) -> Submission {
         if line.trim() == "/vim" {
             Submission::ToggleVim
         } else {
@@ -553,12 +552,12 @@ impl LineEditor {
         }
     }
 
-    fn insert_active_char(&mut self, session: &mut EditSession, ch: char) {
+    fn insert_active_char(session: &mut EditSession, ch: char) {
         let mut buffer = [0; 4];
-        self.insert_active_text(session, ch.encode_utf8(&mut buffer));
+        Self::insert_active_text(session, ch.encode_utf8(&mut buffer));
     }
 
-    fn insert_active_text(&mut self, session: &mut EditSession, text: &str) {
+    fn insert_active_text(session: &mut EditSession, text: &str) {
         if session.mode == EditorMode::Command {
             session
                 .command_buffer
@@ -570,7 +569,7 @@ impl LineEditor {
         }
     }
 
-    fn move_left(&self, session: &mut EditSession) {
+    fn move_left(session: &mut EditSession) {
         if session.mode == EditorMode::Command {
             session.command_cursor =
                 previous_command_boundary(&session.command_buffer, session.command_cursor);
@@ -579,7 +578,7 @@ impl LineEditor {
         }
     }
 
-    fn move_right(&self, session: &mut EditSession) {
+    fn move_right(session: &mut EditSession) {
         if session.mode == EditorMode::Command {
             session.command_cursor = next_boundary(&session.command_buffer, session.command_cursor);
         } else {
@@ -587,7 +586,7 @@ impl LineEditor {
         }
     }
 
-    fn move_line_start(&self, session: &mut EditSession) {
+    fn move_line_start(session: &mut EditSession) {
         if session.mode == EditorMode::Command {
             session.command_cursor = 1;
         } else {
@@ -595,7 +594,7 @@ impl LineEditor {
         }
     }
 
-    fn move_line_end(&self, session: &mut EditSession) {
+    fn move_line_end(session: &mut EditSession) {
         if session.mode == EditorMode::Command {
             session.command_cursor = session.command_buffer.len();
         } else {
@@ -603,21 +602,21 @@ impl LineEditor {
         }
     }
 
-    fn move_up(&self, session: &mut EditSession) {
+    fn move_up(session: &mut EditSession) {
         if session.mode == EditorMode::Command {
             return;
         }
         session.cursor = move_vertical(&session.text, session.cursor, -1);
     }
 
-    fn move_down(&self, session: &mut EditSession) {
+    fn move_down(session: &mut EditSession) {
         if session.mode == EditorMode::Command {
             return;
         }
         session.cursor = move_vertical(&session.text, session.cursor, 1);
     }
 
-    fn delete_char_under_cursor(&self, session: &mut EditSession) {
+    fn delete_char_under_cursor(session: &mut EditSession) {
         match session.mode {
             EditorMode::Command => {
                 if session.command_cursor < session.command_buffer.len() {
@@ -750,12 +749,11 @@ impl LineEditor {
             return;
         }
 
-        let next_index = match session.history_index {
-            Some(index) => index.saturating_sub(1),
-            None => {
-                session.history_backup = Some(session.text.clone());
-                self.history.len() - 1
-            }
+        let next_index = if let Some(index) = session.history_index {
+            index.saturating_sub(1)
+        } else {
+            session.history_backup = Some(session.text.clone());
+            self.history.len() - 1
         };
 
         session.history_index = Some(next_index);
@@ -862,8 +860,11 @@ fn move_vertical(text: &str, cursor: usize, delta: isize) -> usize {
     let current_start = starts[current_row];
     let current_col = text[current_start..cursor].chars().count();
 
-    let max_row = starts.len().saturating_sub(1) as isize;
-    let target_row = (current_row as isize + delta).clamp(0, max_row) as usize;
+    let max_row = starts.len().saturating_sub(1);
+    let target_row = current_row
+        .checked_add_signed(delta)
+        .unwrap_or(0)
+        .min(max_row);
     if target_row == current_row {
         return cursor;
     }
@@ -888,12 +889,10 @@ fn line_starts(text: &str) -> Vec<usize> {
 }
 
 fn byte_index_for_char_column(text: &str, column: usize) -> usize {
-    let mut current = 0;
-    for (index, _) in text.char_indices() {
+    for (current, (index, _)) in text.char_indices().enumerate() {
         if current == column {
             return index;
         }
-        current += 1;
     }
     text.len()
 }
@@ -976,7 +975,7 @@ fn to_u16(value: usize) -> io::Result<u16> {
 #[cfg(test)]
 mod tests {
     use super::{
-        selection_bounds, slash_command_prefix, EditSession, EditorMode, KeyAction, LineEditor,
+        EditSession, EditorMode, KeyAction, LineEditor, selection_bounds, slash_command_prefix,
     };
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -1006,9 +1005,9 @@ mod tests {
         let mut editor = LineEditor::new("> ", vec!["/help".to_string(), "/vim".to_string()]);
 
         // when
-        let first = editor.handle_submission("/vim");
+        let first = LineEditor::handle_submission("/vim");
         editor.vim_enabled = true;
-        let second = editor.handle_submission("/vim");
+        let second = LineEditor::handle_submission("/vim");
 
         // then
         assert!(matches!(first, super::Submission::ToggleVim));
@@ -1023,7 +1022,7 @@ mod tests {
         let mut session = EditSession::new(true);
         session.text = "hello".to_string();
         session.cursor = session.text.len();
-        let _ = editor.handle_escape(&mut session);
+        let _ = LineEditor::handle_escape(&mut session);
 
         // when
         editor.handle_char(&mut session, 'h');
@@ -1043,7 +1042,7 @@ mod tests {
         let mut session = EditSession::new(true);
         session.text = "alpha\nbeta\ngamma".to_string();
         session.cursor = 0;
-        let _ = editor.handle_escape(&mut session);
+        let _ = LineEditor::handle_escape(&mut session);
 
         // when
         editor.handle_char(&mut session, 'y');
@@ -1062,7 +1061,7 @@ mod tests {
         let mut session = EditSession::new(true);
         session.text = "alpha\nbeta\ngamma".to_string();
         session.cursor = 0;
-        let _ = editor.handle_escape(&mut session);
+        let _ = LineEditor::handle_escape(&mut session);
 
         // when
         editor.handle_char(&mut session, 'j');
@@ -1082,7 +1081,7 @@ mod tests {
         let mut session = EditSession::new(true);
         session.text = "alpha\nbeta".to_string();
         session.cursor = 0;
-        let _ = editor.handle_escape(&mut session);
+        let _ = LineEditor::handle_escape(&mut session);
 
         // when
         editor.handle_char(&mut session, 'v');
@@ -1109,13 +1108,13 @@ mod tests {
         let mut session = EditSession::new(true);
         session.text = "draft".to_string();
         session.cursor = session.text.len();
-        let _ = editor.handle_escape(&mut session);
+        let _ = LineEditor::handle_escape(&mut session);
 
         // when
         editor.handle_char(&mut session, ':');
         editor.handle_char(&mut session, 'q');
         editor.handle_char(&mut session, '!');
-        let action = editor.submit_or_toggle(&session);
+        let action = LineEditor::submit_or_toggle(&session);
 
         // then
         assert_eq!(session.mode, EditorMode::Command);

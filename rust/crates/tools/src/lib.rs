@@ -4,20 +4,20 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 use api::{
-    max_tokens_for_model, resolve_model_alias, ContentBlockDelta, InputContentBlock, InputMessage,
-    MessageRequest, MessageResponse, OutputContentBlock, ProviderClient,
-    StreamEvent as ApiStreamEvent, ToolChoice, ToolDefinition, ToolResultContentBlock,
+    ContentBlockDelta, InputContentBlock, InputMessage, MessageRequest, MessageResponse,
+    OutputContentBlock, ProviderClient, StreamEvent as ApiStreamEvent, ToolChoice, ToolDefinition,
+    ToolResultContentBlock, max_tokens_for_model, resolve_model_alias,
 };
 use plugins::PluginTool;
 use reqwest::blocking::Client;
 use runtime::{
-    edit_file, execute_bash, glob_search, grep_search, load_system_prompt, read_file, write_file,
     ApiClient, ApiRequest, AssistantEvent, BashCommandInput, ContentBlock, ConversationMessage,
     ConversationRuntime, GrepSearchInput, MessageRole, PermissionMode, PermissionPolicy,
-    RuntimeError, Session, TokenUsage, ToolError, ToolExecutor,
+    RuntimeError, Session, TokenUsage, ToolError, ToolExecutor, edit_file, execute_bash,
+    glob_search, grep_search, load_system_prompt, read_file, write_file,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolManifestEntry {
@@ -91,7 +91,10 @@ impl GlobalToolRegistry {
         Ok(Self { plugin_tools })
     }
 
-    pub fn normalize_allowed_tools(&self, values: &[String]) -> Result<Option<BTreeSet<String>>, String> {
+    pub fn normalize_allowed_tools(
+        &self,
+        values: &[String],
+    ) -> Result<Option<BTreeSet<String>>, String> {
         if values.is_empty() {
             return Ok(None);
         }
@@ -100,7 +103,11 @@ impl GlobalToolRegistry {
         let canonical_names = builtin_specs
             .iter()
             .map(|spec| spec.name.to_string())
-            .chain(self.plugin_tools.iter().map(|tool| tool.definition().name.clone()))
+            .chain(
+                self.plugin_tools
+                    .iter()
+                    .map(|tool| tool.definition().name.clone()),
+            )
             .collect::<Vec<_>>();
         let mut name_map = canonical_names
             .iter()
@@ -151,7 +158,8 @@ impl GlobalToolRegistry {
             .plugin_tools
             .iter()
             .filter(|tool| {
-                allowed_tools.is_none_or(|allowed| allowed.contains(tool.definition().name.as_str()))
+                allowed_tools
+                    .is_none_or(|allowed| allowed.contains(tool.definition().name.as_str()))
             })
             .map(|tool| ToolDefinition {
                 name: tool.definition().name.clone(),
@@ -174,7 +182,8 @@ impl GlobalToolRegistry {
             .plugin_tools
             .iter()
             .filter(|tool| {
-                allowed_tools.is_none_or(|allowed| allowed.contains(tool.definition().name.as_str()))
+                allowed_tools
+                    .is_none_or(|allowed| allowed.contains(tool.definition().name.as_str()))
             })
             .map(|tool| {
                 (
@@ -319,8 +328,7 @@ pub fn mvp_tool_specs() -> Vec<ToolSpec> {
         },
         ToolSpec {
             name: "WebFetch",
-            description:
-                "Fetch a URL, convert it into readable text, and answer a prompt about it.",
+            description: "Fetch a URL, convert it into readable text, and answer a prompt about it.",
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -1102,6 +1110,7 @@ fn normalize_fetch_url(url: &str) -> Result<String, String> {
 }
 
 fn build_search_url(query: &str) -> Result<reqwest::Url, String> {
+    // TODO: rename env var CLAW_WEB_SEARCH_BASE_URL → FRAUDE_WEB_SEARCH_BASE_URL
     if let Ok(base) = std::env::var("CLAW_WEB_SEARCH_BASE_URL") {
         let mut url = reqwest::Url::parse(&base).map_err(|error| error.to_string())?;
         url.query_pairs_mut().append_pair("q", query);
@@ -1447,6 +1456,7 @@ fn validate_todos(todos: &[TodoItem]) -> Result<(), String> {
 }
 
 fn todo_store_path() -> Result<std::path::PathBuf, String> {
+    // TODO: rename env var CLAW_TODO_STORE → FRAUDE_TODO_STORE
     if let Ok(path) = std::env::var("CLAW_TODO_STORE") {
         return Ok(std::path::PathBuf::from(path));
     }
@@ -1630,7 +1640,7 @@ fn build_agent_runtime(
         .clone()
         .unwrap_or_else(|| DEFAULT_AGENT_MODEL.to_string());
     let allowed_tools = job.allowed_tools.clone();
-    let api_client = ProviderRuntimeClient::new(model, allowed_tools.clone())?;
+    let api_client = ProviderRuntimeClient::new(&model, allowed_tools.clone())?;
     let tool_executor = SubagentToolExecutor::new(allowed_tools);
     Ok(ConversationRuntime::new(
         Session::new(),
@@ -1807,8 +1817,8 @@ struct ProviderRuntimeClient {
 }
 
 impl ProviderRuntimeClient {
-    fn new(model: String, allowed_tools: BTreeSet<String>) -> Result<Self, String> {
-        let model = resolve_model_alias(&model).to_string();
+    fn new(model: &str, allowed_tools: BTreeSet<String>) -> Result<Self, String> {
+        let model = resolve_model_alias(model).clone();
         let client = ProviderClient::from_model(&model).map_err(|error| error.to_string())?;
         Ok(Self {
             runtime: tokio::runtime::Runtime::new().map_err(|error| error.to_string())?,
@@ -1819,8 +1829,8 @@ impl ProviderRuntimeClient {
     }
 }
 
-impl ApiClient for ProviderRuntimeClient {
-    fn stream(&mut self, request: ApiRequest) -> Result<Vec<AssistantEvent>, RuntimeError> {
+impl ProviderRuntimeClient {
+    fn build_message_request(&self, request: &ApiRequest) -> MessageRequest {
         let tools = tool_specs_for_allowed_tools(Some(&self.allowed_tools))
             .into_iter()
             .map(|spec| ToolDefinition {
@@ -1829,7 +1839,7 @@ impl ApiClient for ProviderRuntimeClient {
                 input_schema: spec.input_schema,
             })
             .collect::<Vec<_>>();
-        let message_request = MessageRequest {
+        MessageRequest {
             model: self.model.clone(),
             max_tokens: max_tokens_for_model(&self.model),
             messages: convert_messages(&request.messages),
@@ -1837,7 +1847,13 @@ impl ApiClient for ProviderRuntimeClient {
             tools: (!tools.is_empty()).then_some(tools),
             tool_choice: (!self.allowed_tools.is_empty()).then_some(ToolChoice::Auto),
             stream: true,
-        };
+        }
+    }
+}
+
+impl ApiClient for ProviderRuntimeClient {
+    fn stream(&mut self, request: ApiRequest) -> Result<Vec<AssistantEvent>, RuntimeError> {
+        let message_request = self.build_message_request(&request);
 
         self.runtime.block_on(async {
             let mut stream = self
@@ -2208,6 +2224,7 @@ fn canonical_tool_token(value: &str) -> String {
 }
 
 fn agent_store_dir() -> Result<std::path::PathBuf, String> {
+    // TODO: rename env var CLAW_AGENT_STORE → FRAUDE_AGENT_STORE
     if let Ok(path) = std::env::var("CLAW_AGENT_STORE") {
         return Ok(std::path::PathBuf::from(path));
     }
@@ -2730,7 +2747,7 @@ fn normalize_config_value(spec: ConfigSettingSpec, value: ConfigValue) -> Result
             }
         }
         (ConfigKind::Boolean, ConfigValue::Number(_)) => {
-            return Err(String::from("setting requires true or false"))
+            return Err(String::from("setting requires true or false"));
         }
         (ConfigKind::String, ConfigValue::String(value)) => Value::String(value),
         (ConfigKind::String, ConfigValue::Bool(value)) => Value::String(value.to_string()),
@@ -2761,6 +2778,7 @@ fn config_file_for_scope(scope: ConfigScope) -> Result<PathBuf, String> {
 }
 
 fn config_home_dir() -> Result<PathBuf, String> {
+    // TODO: rename env var CLAW_CONFIG_HOME → FRAUDE_CONFIG_HOME
     if let Ok(path) = std::env::var("CLAW_CONFIG_HOME") {
         return Ok(PathBuf::from(path));
     }
@@ -2829,10 +2847,9 @@ fn iso8601_timestamp() -> String {
     if let Ok(output) = Command::new("date")
         .args(["-u", "+%Y-%m-%dT%H:%M:%SZ"])
         .output()
+        && output.status.success()
     {
-        if output.status.success() {
-            return String::from_utf8_lossy(&output.stdout).trim().to_string();
-        }
+        return String::from_utf8_lossy(&output.stdout).trim().to_string();
     }
     iso8601_now()
 }
@@ -2867,8 +2884,7 @@ fn command_exists(command: &str) -> bool {
         .arg("-lc")
         .arg(format!("command -v {command} >/dev/null 2>&1"))
         .status()
-        .map(|status| status.success())
-        .unwrap_or(false)
+        .is_ok_and(|status| status.success())
 }
 
 #[allow(clippy::too_many_lines)]
@@ -3061,6 +3077,7 @@ fn parse_skill_description(contents: &str) -> Option<String> {
 }
 
 #[cfg(test)]
+#[allow(unsafe_code)]
 mod tests {
     use std::collections::BTreeMap;
     use std::collections::BTreeSet;
@@ -3073,9 +3090,9 @@ mod tests {
     use std::time::Duration;
 
     use super::{
-        agent_permission_policy, allowed_tools_for_subagent, execute_agent_with_spawn,
-        execute_tool, final_assistant_text, mvp_tool_specs, persist_agent_terminal_state,
-        push_output_block, AgentInput, AgentJob, SubagentToolExecutor,
+        AgentInput, AgentJob, SubagentToolExecutor, agent_permission_policy,
+        allowed_tools_for_subagent, execute_agent_with_spawn, execute_tool, final_assistant_text,
+        mvp_tool_specs, persist_agent_terminal_state, push_output_block,
     };
     use api::OutputContentBlock;
     use runtime::{ApiRequest, AssistantEvent, ConversationRuntime, RuntimeError, Session};
@@ -3181,10 +3198,12 @@ mod tests {
 
         let output: serde_json::Value = serde_json::from_str(&result).expect("valid json");
         assert_eq!(output["url"], format!("http://{}/plain", server.addr()));
-        assert!(output["result"]
-            .as_str()
-            .expect("result")
-            .contains("plain text response"));
+        assert!(
+            output["result"]
+                .as_str()
+                .expect("result")
+                .contains("plain text response")
+        );
 
         let error = execute_tool(
             "WebFetch",
@@ -3213,10 +3232,12 @@ mod tests {
             )
         }));
 
-        std::env::set_var(
-            "CLAW_WEB_SEARCH_BASE_URL",
-            format!("http://{}/search", server.addr()),
-        );
+        unsafe {
+            std::env::set_var(
+                "CLAW_WEB_SEARCH_BASE_URL",
+                format!("http://{}/search", server.addr()),
+            );
+        }
         let result = execute_tool(
             "WebSearch",
             &json!({
@@ -3226,7 +3247,9 @@ mod tests {
             }),
         )
         .expect("WebSearch should succeed");
-        std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+        unsafe {
+            std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+        }
 
         let output: serde_json::Value = serde_json::from_str(&result).expect("valid json");
         assert_eq!(output["query"], "rust web search");
@@ -3261,10 +3284,12 @@ mod tests {
             )
         }));
 
-        std::env::set_var(
-            "CLAW_WEB_SEARCH_BASE_URL",
-            format!("http://{}/fallback", server.addr()),
-        );
+        unsafe {
+            std::env::set_var(
+                "CLAW_WEB_SEARCH_BASE_URL",
+                format!("http://{}/fallback", server.addr()),
+            );
+        }
         let result = execute_tool(
             "WebSearch",
             &json!({
@@ -3272,7 +3297,9 @@ mod tests {
             }),
         )
         .expect("WebSearch fallback parsing should succeed");
-        std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+        unsafe {
+            std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+        }
 
         let output: serde_json::Value = serde_json::from_str(&result).expect("valid json");
         let results = output["results"].as_array().expect("results array");
@@ -3285,10 +3312,14 @@ mod tests {
         assert_eq!(content[0]["url"], "https://example.com/one");
         assert_eq!(content[1]["url"], "https://docs.rs/tokio");
 
-        std::env::set_var("CLAW_WEB_SEARCH_BASE_URL", "://bad-base-url");
+        unsafe {
+            std::env::set_var("CLAW_WEB_SEARCH_BASE_URL", "://bad-base-url");
+        }
         let error = execute_tool("WebSearch", &json!({ "query": "generic links" }))
             .expect_err("invalid base URL should fail");
-        std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+        unsafe {
+            std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+        }
         assert!(error.contains("relative URL without a base") || error.contains("empty host"));
     }
 
@@ -3355,7 +3386,9 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let path = temp_path("todos.json");
-        std::env::set_var("CLAW_TODO_STORE", &path);
+        unsafe {
+            std::env::set_var("CLAW_TODO_STORE", &path);
+        }
 
         let first = execute_tool(
             "TodoWrite",
@@ -3381,7 +3414,9 @@ mod tests {
             }),
         )
         .expect("TodoWrite should succeed");
-        std::env::remove_var("CLAW_TODO_STORE");
+        unsafe {
+            std::env::remove_var("CLAW_TODO_STORE");
+        }
         let _ = std::fs::remove_file(path);
 
         let second_output: serde_json::Value = serde_json::from_str(&second).expect("valid json");
@@ -3402,7 +3437,9 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let path = temp_path("todos-errors.json");
-        std::env::set_var("CLAW_TODO_STORE", &path);
+        unsafe {
+            std::env::set_var("CLAW_TODO_STORE", &path);
+        }
 
         let empty = execute_tool("TodoWrite", &json!({ "todos": [] }))
             .expect_err("empty todos should fail");
@@ -3442,7 +3479,9 @@ mod tests {
             }),
         )
         .expect("completed todos should succeed");
-        std::env::remove_var("CLAW_TODO_STORE");
+        unsafe {
+            std::env::remove_var("CLAW_TODO_STORE");
+        }
         let _ = fs::remove_file(path);
 
         let output: serde_json::Value = serde_json::from_str(&nudge).expect("valid json");
@@ -3472,7 +3511,9 @@ mod tests {
         )
         .expect("write SKILL.md fixture");
 
-        std::env::set_var("CODEX_HOME", &codex_home);
+        unsafe {
+            std::env::set_var("CODEX_HOME", &codex_home);
+        }
 
         let result = execute_tool(
             "Skill",
@@ -3485,14 +3526,18 @@ mod tests {
 
         let output: serde_json::Value = serde_json::from_str(&result).expect("valid json");
         assert_eq!(output["skill"], "help");
-        assert!(output["path"]
-            .as_str()
-            .expect("path")
-            .ends_with("/help/SKILL.md"));
-        assert!(output["prompt"]
-            .as_str()
-            .expect("prompt")
-            .contains("Guide on using oh-my-codex plugin"));
+        assert!(
+            output["path"]
+                .as_str()
+                .expect("path")
+                .ends_with("/help/SKILL.md")
+        );
+        assert!(
+            output["prompt"]
+                .as_str()
+                .expect("prompt")
+                .contains("Guide on using oh-my-codex plugin")
+        );
 
         let dollar_result = execute_tool(
             "Skill",
@@ -3504,12 +3549,16 @@ mod tests {
         let dollar_output: serde_json::Value =
             serde_json::from_str(&dollar_result).expect("valid json");
         assert_eq!(dollar_output["skill"], "$help");
-        assert!(dollar_output["path"]
-            .as_str()
-            .expect("path")
-            .ends_with("/help/SKILL.md"));
+        assert!(
+            dollar_output["path"]
+                .as_str()
+                .expect("path")
+                .ends_with("/help/SKILL.md")
+        );
 
-        std::env::remove_var("CODEX_HOME");
+        unsafe {
+            std::env::remove_var("CODEX_HOME");
+        }
         std::fs::remove_dir_all(codex_home).expect("cleanup skill fixture");
     }
 
@@ -3552,7 +3601,9 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = temp_path("agent-store");
-        std::env::set_var("CLAW_AGENT_STORE", &dir);
+        unsafe {
+            std::env::set_var("CLAW_AGENT_STORE", &dir);
+        }
         let captured = Arc::new(Mutex::new(None::<AgentJob>));
         let captured_for_spawn = Arc::clone(&captured);
 
@@ -3572,7 +3623,9 @@ mod tests {
             },
         )
         .expect("Agent should succeed");
-        std::env::remove_var("CLAW_AGENT_STORE");
+        unsafe {
+            std::env::remove_var("CLAW_AGENT_STORE");
+        }
 
         assert_eq!(manifest.name, "ship-audit");
         assert_eq!(manifest.subagent_type.as_deref(), Some("Explore"));
@@ -3629,7 +3682,9 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = temp_path("agent-runner");
-        std::env::set_var("CLAW_AGENT_STORE", &dir);
+        unsafe {
+            std::env::set_var("CLAW_AGENT_STORE", &dir);
+        }
 
         let completed = execute_agent_with_spawn(
             AgentInput {
@@ -3711,7 +3766,9 @@ mod tests {
         assert!(spawn_error_manifest.contains("\"status\": \"failed\""));
         assert!(spawn_error_manifest.contains("thread creation failed"));
 
-        std::env::remove_var("CLAW_AGENT_STORE");
+        unsafe {
+            std::env::remove_var("CLAW_AGENT_STORE");
+        }
         let _ = std::fs::remove_dir_all(dir);
     }
 
@@ -3800,16 +3857,18 @@ mod tests {
             final_assistant_text(&summary),
             "Scope: completed mock review"
         );
-        assert!(runtime
-            .session()
-            .messages
-            .iter()
-            .flat_map(|message| message.blocks.iter())
-            .any(|block| matches!(
-                block,
-                runtime::ContentBlock::ToolResult { output, .. }
-                    if output.contains("hello from child")
-            )));
+        assert!(
+            runtime
+                .session()
+                .messages
+                .iter()
+                .flat_map(|message| message.blocks.iter())
+                .any(|block| matches!(
+                    block,
+                    runtime::ContentBlock::ToolResult { output, .. }
+                        if output.contains("hello from child")
+                ))
+        );
 
         let _ = std::fs::remove_file(path);
     }
@@ -3973,20 +4032,24 @@ mod tests {
             .expect("bash failure should still return structured output");
         let failure_output: serde_json::Value = serde_json::from_str(&failure).expect("json");
         assert_eq!(failure_output["returnCodeInterpretation"], "exit_code:7");
-        assert!(failure_output["stderr"]
-            .as_str()
-            .expect("stderr")
-            .contains("oops"));
+        assert!(
+            failure_output["stderr"]
+                .as_str()
+                .expect("stderr")
+                .contains("oops")
+        );
 
         let timeout = execute_tool("bash", &json!({ "command": "sleep 1", "timeout": 10 }))
             .expect("bash timeout should return output");
         let timeout_output: serde_json::Value = serde_json::from_str(&timeout).expect("json");
         assert_eq!(timeout_output["interrupted"], true);
         assert_eq!(timeout_output["returnCodeInterpretation"], "timeout");
-        assert!(timeout_output["stderr"]
-            .as_str()
-            .expect("stderr")
-            .contains("Command exceeded timeout"));
+        assert!(
+            timeout_output["stderr"]
+                .as_str()
+                .expect("stderr")
+                .contains("Command exceeded timeout")
+        );
 
         let background = execute_tool(
             "bash",
@@ -4130,10 +4193,12 @@ mod tests {
             .expect("glob should succeed");
         let globbed_output: serde_json::Value = serde_json::from_str(&globbed).expect("json");
         assert_eq!(globbed_output["numFiles"], 1);
-        assert!(globbed_output["filenames"][0]
-            .as_str()
-            .expect("filename")
-            .ends_with("nested/lib.rs"));
+        assert!(
+            globbed_output["filenames"][0]
+                .as_str()
+                .expect("filename")
+                .ends_with("nested/lib.rs")
+        );
 
         let glob_error = execute_tool("glob_search", &json!({ "pattern": "[" }))
             .expect_err("invalid glob should fail");
@@ -4157,10 +4222,12 @@ mod tests {
         assert_eq!(grep_content_output["numFiles"], 0);
         assert!(grep_content_output["appliedLimit"].is_null());
         assert_eq!(grep_content_output["appliedOffset"], 1);
-        assert!(grep_content_output["content"]
-            .as_str()
-            .expect("content")
-            .contains("let alpha = 2;"));
+        assert!(
+            grep_content_output["content"]
+                .as_str()
+                .expect("content")
+                .contains("let alpha = 2;")
+        );
 
         let grep_count = execute_tool(
             "grep_search",
@@ -4189,10 +4256,12 @@ mod tests {
         let elapsed = started.elapsed();
         let output: serde_json::Value = serde_json::from_str(&result).expect("json");
         assert_eq!(output["duration_ms"], 20);
-        assert!(output["message"]
-            .as_str()
-            .expect("message")
-            .contains("Slept for 20ms"));
+        assert!(
+            output["message"]
+                .as_str()
+                .expect("message")
+                .contains("Slept for 20ms")
+        );
         assert!(elapsed >= Duration::from_millis(15));
     }
 
@@ -4249,8 +4318,12 @@ mod tests {
         let original_home = std::env::var("HOME").ok();
         let original_config_home = std::env::var("CLAW_CONFIG_HOME").ok();
         let original_dir = std::env::current_dir().expect("cwd");
-        std::env::set_var("HOME", &home);
-        std::env::remove_var("CLAW_CONFIG_HOME");
+        unsafe {
+            std::env::set_var("HOME", &home);
+        }
+        unsafe {
+            std::env::remove_var("CLAW_CONFIG_HOME");
+        }
         std::env::set_current_dir(&cwd).expect("set cwd");
 
         let get = execute_tool("Config", &json!({"setting": "verbose"})).expect("get config");
@@ -4280,12 +4353,12 @@ mod tests {
 
         std::env::set_current_dir(&original_dir).expect("restore cwd");
         match original_home {
-            Some(value) => std::env::set_var("HOME", value),
-            None => std::env::remove_var("HOME"),
+            Some(value) => unsafe { std::env::set_var("HOME", value) },
+            None => unsafe { std::env::remove_var("HOME") },
         }
         match original_config_home {
-            Some(value) => std::env::set_var("CLAW_CONFIG_HOME", value),
-            None => std::env::remove_var("CLAW_CONFIG_HOME"),
+            Some(value) => unsafe { std::env::set_var("CLAW_CONFIG_HOME", value) },
+            None => unsafe { std::env::remove_var("CLAW_CONFIG_HOME") },
         }
         let _ = std::fs::remove_dir_all(root);
     }
@@ -4342,7 +4415,9 @@ printf 'pwsh:%s' "$1"
             .status()
             .expect("chmod");
         let original_path = std::env::var("PATH").unwrap_or_default();
-        std::env::set_var("PATH", format!("{}:{}", dir.display(), original_path));
+        unsafe {
+            std::env::set_var("PATH", format!("{}:{}", dir.display(), original_path));
+        }
 
         let result = execute_tool(
             "PowerShell",
@@ -4356,7 +4431,9 @@ printf 'pwsh:%s' "$1"
         )
         .expect("PowerShell background should succeed");
 
-        std::env::set_var("PATH", original_path);
+        unsafe {
+            std::env::set_var("PATH", original_path);
+        }
         let _ = std::fs::remove_dir_all(dir);
 
         let output: serde_json::Value = serde_json::from_str(&result).expect("json");
@@ -4383,12 +4460,16 @@ printf 'pwsh:%s' "$1"
                 .as_nanos()
         ));
         std::fs::create_dir_all(&empty_dir).expect("create empty dir");
-        std::env::set_var("PATH", empty_dir.display().to_string());
+        unsafe {
+            std::env::set_var("PATH", empty_dir.display().to_string());
+        }
 
         let err = execute_tool("PowerShell", &json!({"command": "Write-Output hello"}))
             .expect_err("PowerShell should fail when shell is missing");
 
-        std::env::set_var("PATH", original_path);
+        unsafe {
+            std::env::set_var("PATH", original_path);
+        }
         let _ = std::fs::remove_dir_all(empty_dir);
 
         assert!(err.contains("PowerShell executable not found"));
@@ -4409,26 +4490,29 @@ printf 'pwsh:%s' "$1"
             let addr = listener.local_addr().expect("local addr");
             let (tx, rx) = std::sync::mpsc::channel::<()>();
 
-            let handle = thread::spawn(move || loop {
-                if rx.try_recv().is_ok() {
-                    break;
-                }
+            let handle = thread::spawn(move || {
+                loop {
+                    if rx.try_recv().is_ok() {
+                        break;
+                    }
 
-                match listener.accept() {
-                    Ok((mut stream, _)) => {
-                        let mut buffer = [0_u8; 4096];
-                        let size = stream.read(&mut buffer).expect("read request");
-                        let request = String::from_utf8_lossy(&buffer[..size]).into_owned();
-                        let request_line = request.lines().next().unwrap_or_default().to_string();
-                        let response = handler(&request_line);
-                        stream
-                            .write_all(response.to_bytes().as_slice())
-                            .expect("write response");
+                    match listener.accept() {
+                        Ok((mut stream, _)) => {
+                            let mut buffer = [0_u8; 4096];
+                            let size = stream.read(&mut buffer).expect("read request");
+                            let request = String::from_utf8_lossy(&buffer[..size]).into_owned();
+                            let request_line =
+                                request.lines().next().unwrap_or_default().to_string();
+                            let response = handler(&request_line);
+                            stream
+                                .write_all(response.to_bytes().as_slice())
+                                .expect("write response");
+                        }
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                            thread::sleep(Duration::from_millis(10));
+                        }
+                        Err(error) => panic!("server accept failed: {error}"),
                     }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        thread::sleep(Duration::from_millis(10));
-                    }
-                    Err(error) => panic!("server accept failed: {error}"),
                 }
             });
 
