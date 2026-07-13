@@ -195,10 +195,32 @@ impl ConfigLoader {
 
     #[must_use]
     pub fn discover(&self) -> Vec<ConfigEntry> {
-        let user_legacy_path = self.config_home.parent().map_or_else(
-            || PathBuf::from(".claw.json"),
-            |parent| parent.join(".claw.json"),
+        let parent = self.config_home.parent();
+
+        // User-level legacy single-file: prefer .fraude.json, fall back to .claw.json
+        let user_legacy_path = parent.map_or_else(
+            || PathBuf::from(".fraude.json"),
+            |p| {
+                let fraude = p.join(".fraude.json");
+                let claw = p.join(".claw.json");
+                if !fraude.exists() && claw.exists() { claw } else { fraude }
+            },
         );
+
+        // Project-level single-file: prefer .fraude.json, fall back to .claw.json
+        let project_legacy_path = {
+            let fraude = self.cwd.join(".fraude.json");
+            let claw = self.cwd.join(".claw.json");
+            if !fraude.exists() && claw.exists() { claw } else { fraude }
+        };
+
+        // Project-level dir: prefer .fraude/, fall back to .claw/
+        let project_dir = {
+            let fraude = self.cwd.join(".fraude");
+            let claw = self.cwd.join(".claw");
+            if !fraude.exists() && claw.exists() { claw } else { fraude }
+        };
+
         vec![
             ConfigEntry {
                 source: ConfigSource::User,
@@ -210,15 +232,15 @@ impl ConfigLoader {
             },
             ConfigEntry {
                 source: ConfigSource::Project,
-                path: self.cwd.join(".claw.json"),
+                path: project_legacy_path,
             },
             ConfigEntry {
                 source: ConfigSource::Project,
-                path: self.cwd.join(".claw").join("settings.json"),
+                path: project_dir.join("settings.json"),
             },
             ConfigEntry {
                 source: ConfigSource::Local,
-                path: self.cwd.join(".claw").join("settings.local.json"),
+                path: project_dir.join("settings.local.json"),
             },
         ]
     }
@@ -420,10 +442,20 @@ impl RuntimePluginConfig {
 
 #[must_use]
 pub fn default_config_home() -> PathBuf {
-    std::env::var_os("FRAUDE_CONFIG_HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".claw")))
-        .unwrap_or_else(|| PathBuf::from(".claw"))
+    if let Some(explicit) = std::env::var_os("FRAUDE_CONFIG_HOME") {
+        return PathBuf::from(explicit);
+    }
+    let home_base = std::env::var_os("HOME")
+        .map_or_else(|| PathBuf::from("."), PathBuf::from);
+    let fraude_dir = home_base.join(".fraude");
+    let claw_dir = home_base.join(".claw");
+    if !fraude_dir.exists() && claw_dir.exists() {
+        eprintln!(
+            "Warning: using legacy config dir ~/.claw; rename to ~/.fraude to silence this"
+        );
+        return claw_dir;
+    }
+    fraude_dir
 }
 
 impl RuntimeHookConfig {
@@ -494,7 +526,8 @@ impl McpServerConfig {
 fn read_optional_json_object(
     path: &Path,
 ) -> Result<Option<BTreeMap<String, JsonValue>>, ConfigError> {
-    let is_legacy_config = path.file_name().and_then(|name| name.to_str()) == Some(".claw.json");
+    let file_name = path.file_name().and_then(|name| name.to_str());
+    let is_legacy_config = matches!(file_name, Some(".claw.json" | ".fraude.json"));
     let contents = match fs::read_to_string(path) {
         Ok(contents) => contents,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),

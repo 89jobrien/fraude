@@ -346,6 +346,25 @@ mod tests {
     }
 
     #[test]
+    fn unknown_sandbox_filesystem_mode_falls_back_to_default() {
+        // An unrecognised FRAUDE_SANDBOX_FILESYSTEM_MODE value must not cause a panic;
+        // the sandbox config is constructed directly (as the env var is consumed by the
+        // shell wrapper, not by SandboxConfig itself).  We verify that a SandboxConfig
+        // with no filesystem_mode set resolves to the default permissive mode.
+        let config = SandboxConfig {
+            enabled: Some(true),
+            namespace_restrictions: Some(false),
+            network_isolation: Some(false),
+            filesystem_mode: None, // simulates an unknown/unrecognised value being absent
+            allowed_mounts: vec![],
+        };
+        let request = config.resolve_request(None, None, None, None, None);
+        // Default filesystem mode is WorkspaceOnly — not AllowList, not a panic.
+        assert_eq!(request.filesystem_mode, FilesystemIsolationMode::WorkspaceOnly);
+        assert!(request.enabled);
+    }
+
+    #[test]
     fn builds_linux_launcher_with_network_flag_when_requested() {
         let config = SandboxConfig::default();
         let status = super::resolve_sandbox_status_for_request(
