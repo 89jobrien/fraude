@@ -8,7 +8,7 @@ const STARTER_FRAUDE_JSON: &str = concat!(
     "  }\n",
     "}\n",
 );
-const GITIGNORE_COMMENT: &str = "# Claw Code local artifacts";
+const GITIGNORE_COMMENT: &str = "# Fraude local artifacts";
 const GITIGNORE_ENTRIES: [&str; 2] = [".fraude/settings.local.json", ".fraude/sessions/"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

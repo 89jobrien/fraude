@@ -409,7 +409,13 @@ fn permission_mode_from_label(mode: &str) -> PermissionMode {
         "read-only" => PermissionMode::ReadOnly,
         "workspace-write" => PermissionMode::WorkspaceWrite,
         "danger-full-access" => PermissionMode::DangerFullAccess,
-        other => panic!("unsupported permission mode label: {other}"),
+        other => {
+            eprintln!(
+                "warning: unsupported FRAUDE_PERMISSION_MODE value '{other}', \
+                 falling back to danger-full-access"
+            );
+            PermissionMode::DangerFullAccess
+        }
     }
 }
 
@@ -524,7 +530,7 @@ fn run_login() -> Result<(), Box<dyn std::error::Error>> {
         OAuthAuthorizationRequest::from_config(oauth, redirect_uri.clone(), state.clone(), &pkce)
             .build_url();
 
-    println!("Starting Claw OAuth login...");
+    println!("Starting Fraude OAuth login...");
     println!("Listening for callback on {redirect_uri}");
     if let Err(error) = open_browser(&authorize_url) {
         eprintln!("warning: failed to open browser automatically: {error}");
@@ -559,13 +565,13 @@ fn run_login() -> Result<(), Box<dyn std::error::Error>> {
         expires_at: token_set.expires_at,
         scopes: token_set.scopes,
     })?;
-    println!("Claw OAuth login complete.");
+    println!("Fraude OAuth login complete.");
     Ok(())
 }
 
 fn run_logout() -> Result<(), Box<dyn std::error::Error>> {
     clear_oauth_credentials()?;
-    println!("Claw OAuth credentials cleared.");
+    println!("Fraude OAuth credentials cleared.");
     Ok(())
 }
 
@@ -610,9 +616,9 @@ fn wait_for_oauth_callback(
     let callback = parse_oauth_callback_request_target(target)
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
     let body = if callback.error.is_some() {
-        "Claw OAuth login failed. You can close this window."
+        "Fraude OAuth login failed. You can close this window."
     } else {
-        "Claw OAuth login succeeded. You can close this window."
+        "Fraude OAuth login succeeded. You can close this window."
     };
     let response = format!(
         "HTTP/1.1 200 OK\r\ncontent-type: text/plain; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",

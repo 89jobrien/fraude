@@ -223,7 +223,7 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App) {
     };
     let title = Line::from(vec![
         Span::styled(
-            " claw ",
+            " fraude ",
             Style::default()
                 .fg(Color::Black)
                 .bg(Color::Cyan)
