@@ -63,16 +63,30 @@ fn resolve_upstream_repo_root(primary_repo_root: &Path) -> PathBuf {
 }
 
 fn upstream_repo_candidates(primary_repo_root: &Path) -> Vec<PathBuf> {
+    // FRAUDE_UPSTREAM allows callers to override the upstream source location explicitly.
+    // It was renamed from CLAW_CODE_UPSTREAM during the fraude branding migration.
+    let explicit_override = std::env::var_os("FRAUDE_UPSTREAM").map(PathBuf::from);
+    upstream_repo_candidates_with_override(primary_repo_root, explicit_override.as_deref())
+}
+
+fn upstream_repo_candidates_with_override(
+    primary_repo_root: &Path,
+    explicit_override: Option<&Path>,
+) -> Vec<PathBuf> {
     let mut candidates = vec![primary_repo_root.to_path_buf()];
 
-    if let Some(explicit) = std::env::var_os("FRAUDE_UPSTREAM") {
-        candidates.push(PathBuf::from(explicit));
+    if let Some(explicit) = explicit_override {
+        candidates.push(explicit.to_path_buf());
     }
 
     for ancestor in primary_repo_root.ancestors().take(4) {
+        // "claw-code" is the upstream repository name, not a Fraude brand reference.
+        // These paths locate the vendored upstream source; do not rename them.
         candidates.push(ancestor.join("claw-code"));
     }
 
+    // "claw-code" is the upstream repository name, not a Fraude brand reference.
+    // These paths locate the vendored upstream source; do not rename them.
     candidates.push(primary_repo_root.join("reference-source").join("claw-code"));
     candidates.push(primary_repo_root.join("vendor").join("claw-code"));
 
@@ -353,5 +367,19 @@ mod tests {
             .collect();
         assert!(names.contains(&"AgentTool"));
         assert!(names.contains(&"BashTool"));
+    }
+
+    #[test]
+    fn fraude_upstream_env_var_appears_in_candidates() {
+        let tmp = std::env::temp_dir().join("fraude-upstream-test");
+        let primary = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        // Exercise the override path directly, avoiding unsafe set_var.
+        let candidates = upstream_repo_candidates_with_override(primary, Some(&tmp));
+
+        assert!(
+            candidates.contains(&tmp),
+            "FRAUDE_UPSTREAM path should appear in candidates; got {candidates:?}"
+        );
     }
 }
