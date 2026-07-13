@@ -487,7 +487,7 @@ pub fn mvp_tool_specs() -> Vec<ToolSpec> {
         },
         ToolSpec {
             name: "Config",
-            description: "Get or set Claw Code settings.",
+            description: "Get or set Fraude settings.",
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -1089,7 +1089,7 @@ fn build_http_client() -> Result<Client, String> {
     Client::builder()
         .timeout(Duration::from_secs(20))
         .redirect(reqwest::redirect::Policy::limited(10))
-        .user_agent("claw-rust-tools/0.1")
+        .user_agent("fraude-tools/0.1")
         .build()
         .map_err(|error| error.to_string())
 }
@@ -1459,7 +1459,13 @@ fn todo_store_path() -> Result<std::path::PathBuf, String> {
         return Ok(std::path::PathBuf::from(path));
     }
     let cwd = std::env::current_dir().map_err(|error| error.to_string())?;
-    Ok(cwd.join(".claw-todos.json"))
+    let new_path = cwd.join(".fraude-todos.json");
+    let old_path = cwd.join(".claw-todos.json");
+    if !new_path.exists() && old_path.exists() {
+        Ok(old_path)
+    } else {
+        Ok(new_path)
+    }
 }
 
 fn resolve_skill_path(skill: &str) -> Result<std::path::PathBuf, String> {
@@ -2227,9 +2233,21 @@ fn agent_store_dir() -> Result<std::path::PathBuf, String> {
     }
     let cwd = std::env::current_dir().map_err(|error| error.to_string())?;
     if let Some(workspace_root) = cwd.ancestors().nth(2) {
-        return Ok(workspace_root.join(".claw-agents"));
+        let new_path = workspace_root.join(".fraude-agents");
+        let old_path = workspace_root.join(".claw-agents");
+        return Ok(if !new_path.exists() && old_path.exists() {
+            old_path
+        } else {
+            new_path
+        });
     }
-    Ok(cwd.join(".claw-agents"))
+    let new_path = cwd.join(".fraude-agents");
+    let old_path = cwd.join(".claw-agents");
+    Ok(if !new_path.exists() && old_path.exists() {
+        old_path
+    } else {
+        new_path
+    })
 }
 
 fn make_agent_id() -> String {
