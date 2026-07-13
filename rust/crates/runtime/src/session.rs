@@ -233,7 +233,7 @@ impl ConversationMessage {
             other => {
                 return Err(SessionError::Format(format!(
                     "unsupported message role: {other}"
-                )))
+                )));
             }
         };
         let blocks = object

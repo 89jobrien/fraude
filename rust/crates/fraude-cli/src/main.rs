@@ -17,28 +17,28 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use api::{
-    resolve_startup_auth_source, AuthSource, FraudeApiClient, ProviderClient,
-    ContentBlockDelta, InputContentBlock,
-    InputMessage, MessageRequest, MessageResponse, OutputContentBlock,
+    AuthSource, ContentBlockDelta, FraudeApiClient, InputContentBlock, InputMessage,
+    MessageRequest, MessageResponse, OutputContentBlock, ProviderClient,
     StreamEvent as ApiStreamEvent, ToolChoice, ToolDefinition, ToolResultContentBlock,
+    resolve_startup_auth_source,
 };
 
 use commands::{
-    handle_agents_slash_command, handle_plugins_slash_command, handle_skills_slash_command,
-    render_slash_command_help, resume_supported_slash_commands, slash_command_specs,
-    suggest_slash_commands, SlashCommand,
+    SlashCommand, handle_agents_slash_command, handle_plugins_slash_command,
+    handle_skills_slash_command, render_slash_command_help, resume_supported_slash_commands,
+    slash_command_specs, suggest_slash_commands,
 };
-use compat_harness::{extract_manifest, UpstreamPaths};
+use compat_harness::{UpstreamPaths, extract_manifest};
 use init::initialize_repo;
 use plugins::{PluginManager, PluginManagerConfig};
 use render::{MarkdownStreamState, Spinner, TerminalRenderer};
 use runtime::{
+    ApiClient, ApiRequest, AssistantEvent, CompactionConfig, ConfigLoader, ConfigSource,
+    ContentBlock, ConversationMessage, ConversationRuntime, MessageRole, OAuthAuthorizationRequest,
+    OAuthConfig, OAuthTokenExchangeRequest, PermissionMode, PermissionPolicy, ProjectContext,
+    RuntimeError, Session, TokenUsage, ToolError, ToolExecutor, UsageTracker,
     clear_oauth_credentials, generate_pkce_pair, generate_state, load_system_prompt,
-    parse_oauth_callback_request_target, save_oauth_credentials, ApiClient, ApiRequest,
-    AssistantEvent, CompactionConfig, ConfigLoader, ConfigSource, ContentBlock,
-    ConversationMessage, ConversationRuntime, MessageRole, OAuthAuthorizationRequest, OAuthConfig,
-    OAuthTokenExchangeRequest, PermissionMode, PermissionPolicy, ProjectContext, RuntimeError,
-    Session, TokenUsage, ToolError, ToolExecutor, UsageTracker,
+    parse_oauth_callback_request_target, save_oauth_credentials,
 };
 use serde_json::json;
 use tools::GlobalToolRegistry;
@@ -359,7 +359,9 @@ fn format_direct_slash_command_error(command: &str, is_unknown: bool) -> String 
     if is_unknown {
         append_slash_command_suggestions(&mut lines, trimmed);
     } else {
-        lines.push("  Try              Start `fraude` to use interactive slash commands".to_string());
+        lines.push(
+            "  Try              Start `fraude` to use interactive slash commands".to_string(),
+        );
         lines.push(
             "  Tip              Resume-safe commands also work with `fraude --resume SESSION.json ...`"
                 .to_string(),
@@ -489,7 +491,7 @@ fn dump_manifests() {
 }
 
 fn print_bootstrap_plan() {
-    for phase in runtime::BootstrapPlan::claw_default().phases() {
+    for phase in runtime::BootstrapPlan::fraude_default().phases() {
         println!("- {phase:?}");
     }
 }
@@ -504,7 +506,7 @@ fn default_oauth_config() -> OAuthConfig {
         scopes: vec![
             String::from("user:profile"),
             String::from("user:inference"),
-            String::from("user:sessions:claw_code"),
+            String::from("user:sessions:fraude"),
         ],
     }
 }
@@ -1122,7 +1124,7 @@ impl LiveCli {
             || workspace_name.to_string(),
             |branch| format!("{workspace_name} · {branch}"),
         );
-        let has_claw_md = cwd
+        let has_fraude_md = cwd
             .as_ref()
             .is_some_and(|path| path.join("FRAUDE.md").is_file());
         let mut lines = vec![
@@ -1146,7 +1148,7 @@ impl LiveCli {
             format!("  Session          {}", self.session.id),
             format!(
                 "  Quick start      {}",
-                if has_claw_md {
+                if has_fraude_md {
                     "/help · /status · ask for a task"
                 } else {
                     "/init · /help · /status"
@@ -1156,7 +1158,7 @@ impl LiveCli {
                 .to_string(),
             "  Multiline        Shift+Enter or Ctrl+J inserts a newline".to_string(),
         ];
-        if !has_claw_md {
+        if !has_fraude_md {
             lines.push(
                 "  First run        /init scaffolds FRAUDE.md, .fraude.json, and local session files"
                     .to_string(),
@@ -1246,6 +1248,8 @@ impl LiveCli {
         Ok(())
     }
 
+    // TODO: refactor handle_repl_command into smaller dispatch helpers
+    #[allow(clippy::too_many_lines)]
     fn handle_repl_command(
         &mut self,
         command: SlashCommand,
@@ -1631,7 +1635,9 @@ impl LiveCli {
                 Ok(true)
             }
             Some(other) => {
-                println!("Unknown /session action '{other}'. Use /session list or /session switch <session-id>.");
+                println!(
+                    "Unknown /session action '{other}'. Use /session list or /session switch <session-id>."
+                );
                 Ok(false)
             }
         }
@@ -1826,7 +1832,11 @@ impl LiveCli {
                 let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
                 println!(
                     "PR\n  Result           created\n  Title            {title}\n  URL              {}",
-                    if stdout.is_empty() { "<unknown>" } else { &stdout }
+                    if stdout.is_empty() {
+                        "<unknown>"
+                    } else {
+                        &stdout
+                    }
                 );
                 return Ok(());
             }
@@ -1857,7 +1867,11 @@ impl LiveCli {
                 let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
                 println!(
                     "Issue\n  Result           created\n  Title            {title}\n  URL              {}",
-                    if stdout.is_empty() { "<unknown>" } else { &stdout }
+                    if stdout.is_empty() {
+                        "<unknown>"
+                    } else {
+                        &stdout
+                    }
                 );
                 return Ok(());
             }
@@ -1937,15 +1951,14 @@ fn list_managed_sessions() -> Result<Vec<ManagedSessionSummary>, Box<dyn std::er
             message_count,
         });
     }
-    sessions.sort_by(|left, right| right.modified_epoch_secs.cmp(&left.modified_epoch_secs));
+    sessions.sort_by_key(|s| std::cmp::Reverse(s.modified_epoch_secs));
     Ok(sessions)
 }
 
 fn format_relative_timestamp(epoch_secs: u64) -> String {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_secs())
-        .unwrap_or(epoch_secs);
+        .map_or(epoch_secs, |duration| duration.as_secs());
     let elapsed = now.saturating_sub(epoch_secs);
     match elapsed {
         0..=59 => format!("{elapsed}s ago"),
@@ -2232,7 +2245,8 @@ fn render_memory_report() -> Result<String, Box<dyn std::error::Error>> {
     if project_context.instruction_files.is_empty() {
         lines.push("Discovered files".to_string());
         lines.push(
-            "  No FRAUDE instruction files discovered in the current directory ancestry.".to_string(),
+            "  No FRAUDE instruction files discovered in the current directory ancestry."
+                .to_string(),
         );
     } else {
         lines.push("Discovered files".to_string());
@@ -2243,7 +2257,7 @@ fn render_memory_report() -> Result<String, Box<dyn std::error::Error>> {
             } else {
                 preview
             };
-            lines.push(format!("  {}. {}", index + 1, file.path.display(),));
+            lines.push(format!("  {}. {}", index + 1, file.path.display()));
             lines.push(format!(
                 "     lines={} preview={}",
                 file.content.lines().count(),
@@ -2431,8 +2445,7 @@ fn command_exists(name: &str) -> bool {
     Command::new("which")
         .arg(name)
         .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+        .is_ok_and(|output| output.status.success())
 }
 
 fn write_temp_text_file(
@@ -2599,8 +2612,8 @@ fn build_system_prompt() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     )?)
 }
 
-fn build_runtime_plugin_state(
-) -> Result<(runtime::RuntimeFeatureConfig, GlobalToolRegistry), Box<dyn std::error::Error>> {
+fn build_runtime_plugin_state()
+-> Result<(runtime::RuntimeFeatureConfig, GlobalToolRegistry), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
     let loader = ConfigLoader::default_for(&cwd);
     let runtime_config = loader.load()?;
@@ -2822,10 +2835,12 @@ impl InternalPromptProgressRun {
 
         let (heartbeat_stop, heartbeat_rx) = mpsc::channel();
         let heartbeat_reporter = reporter.clone();
-        let heartbeat_handle = thread::spawn(move || loop {
-            match heartbeat_rx.recv_timeout(INTERNAL_PROGRESS_HEARTBEAT_INTERVAL) {
-                Ok(()) | Err(RecvTimeoutError::Disconnected) => break,
-                Err(RecvTimeoutError::Timeout) => heartbeat_reporter.emit_heartbeat(),
+        let heartbeat_handle = thread::spawn(move || {
+            loop {
+                match heartbeat_rx.recv_timeout(INTERNAL_PROGRESS_HEARTBEAT_INTERVAL) {
+                    Ok(()) | Err(RecvTimeoutError::Disconnected) => break,
+                    Err(RecvTimeoutError::Timeout) => heartbeat_reporter.emit_heartbeat(),
+                }
             }
         });
 
@@ -3070,7 +3085,8 @@ impl DefaultRuntimeClient {
         tool_registry: GlobalToolRegistry,
         progress_reporter: Option<InternalPromptProgressReporter>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let client = ProviderClient::from_model_with_default_auth(&model, Some(resolve_cli_auth_source()?))?;
+        let client =
+            ProviderClient::from_model_with_default_auth(&model, Some(resolve_cli_auth_source()?))?;
         Ok(Self {
             runtime: tokio::runtime::Runtime::new()?,
             client,
@@ -3533,26 +3549,26 @@ fn format_bash_result(icon: &str, parsed: &serde_json::Value) -> String {
         write!(&mut lines[0], " {status}").expect("write to string");
     }
 
-    if let Some(stdout) = parsed.get("stdout").and_then(|value| value.as_str()) {
-        if !stdout.trim().is_empty() {
-            lines.push(truncate_output_for_display(
-                stdout,
+    if let Some(stdout) = parsed.get("stdout").and_then(|value| value.as_str())
+        && !stdout.trim().is_empty()
+    {
+        lines.push(truncate_output_for_display(
+            stdout,
+            TOOL_OUTPUT_DISPLAY_MAX_LINES,
+            TOOL_OUTPUT_DISPLAY_MAX_CHARS,
+        ));
+    }
+    if let Some(stderr) = parsed.get("stderr").and_then(|value| value.as_str())
+        && !stderr.trim().is_empty()
+    {
+        lines.push(format!(
+            "\x1b[38;5;203m{}\x1b[0m",
+            truncate_output_for_display(
+                stderr,
                 TOOL_OUTPUT_DISPLAY_MAX_LINES,
                 TOOL_OUTPUT_DISPLAY_MAX_CHARS,
-            ));
-        }
-    }
-    if let Some(stderr) = parsed.get("stderr").and_then(|value| value.as_str()) {
-        if !stderr.trim().is_empty() {
-            lines.push(format!(
-                "\x1b[38;5;203m{}\x1b[0m",
-                truncate_output_for_display(
-                    stderr,
-                    TOOL_OUTPUT_DISPLAY_MAX_LINES,
-                    TOOL_OUTPUT_DISPLAY_MAX_CHARS,
-                )
-            ));
-        }
+            )
+        ));
     }
 
     lines.join("\n\n")
@@ -3975,6 +3991,8 @@ fn convert_messages(messages: &[ConversationMessage]) -> Vec<InputMessage> {
         .collect()
 }
 
+// TODO: split print_help_to into themed section helpers
+#[allow(clippy::too_many_lines)]
 fn print_help_to(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Fraude CLI v{VERSION}")?;
     writeln!(
@@ -4051,7 +4069,10 @@ fn print_help_to(out: &mut impl Write) -> io::Result<()> {
         out,
         "  fraude skills                           List installed skills"
     )?;
-    writeln!(out, "  fraude system-prompt [--cwd PATH] [--date YYYY-MM-DD]")?;
+    writeln!(
+        out,
+        "  fraude system-prompt [--cwd PATH] [--date YYYY-MM-DD]"
+    )?;
     writeln!(
         out,
         "  fraude login                            Start the OAuth login flow"
@@ -4131,7 +4152,9 @@ fn print_help() {
 #[cfg(test)]
 mod tests {
     use super::{
-        describe_tool_progress, filter_tool_specs, format_compact_report, format_cost_report,
+        CliAction, CliOutputFormat, DEFAULT_MODEL, InternalPromptProgressEvent,
+        InternalPromptProgressState, SlashCommand, StatusUsage, describe_tool_progress,
+        filter_tool_specs, format_compact_report, format_cost_report,
         format_internal_prompt_progress_line, format_model_report, format_model_switch_report,
         format_permissions_report, format_permissions_switch_report, format_resume_report,
         format_status_report, format_tool_call_start, format_tool_result,
@@ -4139,8 +4162,6 @@ mod tests {
         print_help_to, push_output_block, render_config_report, render_memory_report,
         render_repl_help, render_unknown_repl_command, resolve_model_alias, response_to_events,
         resume_supported_slash_commands, slash_command_completion_candidates, status_context,
-        CliAction, CliOutputFormat, InternalPromptProgressEvent, InternalPromptProgressState,
-        SlashCommand, StatusUsage, DEFAULT_MODEL,
     };
     use api::{MessageResponse, OutputContentBlock, Usage};
     use plugins::{PluginTool, PluginToolDefinition, PluginToolPermission};
@@ -4560,7 +4581,9 @@ mod tests {
         let report = format_permissions_report("workspace-write");
         assert!(report.contains("Permissions"));
         assert!(report.contains("Active mode      workspace-write"));
-        assert!(report.contains("Effect           Editing tools can modify files in the workspace"));
+        assert!(
+            report.contains("Effect           Editing tools can modify files in the workspace")
+        );
         assert!(report.contains("Modes"));
         assert!(report.contains("read-only          ○ available Read/search tools only"));
         assert!(report.contains("workspace-write    ● current   Edit files inside the workspace"));

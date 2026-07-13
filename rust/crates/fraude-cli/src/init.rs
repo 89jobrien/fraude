@@ -80,16 +80,16 @@ struct RepoDetection {
 pub(crate) fn initialize_repo(cwd: &Path) -> Result<InitReport, Box<dyn std::error::Error>> {
     let mut artifacts = Vec::new();
 
-    let claw_dir = cwd.join(".fraude");
+    let fraude_dir = cwd.join(".fraude");
     artifacts.push(InitArtifact {
         name: ".fraude/",
-        status: ensure_dir(&claw_dir)?,
+        status: ensure_dir(&fraude_dir)?,
     });
 
-    let claw_json = cwd.join(".fraude.json");
+    let fraude_json = cwd.join(".fraude.json");
     artifacts.push(InitArtifact {
         name: ".fraude.json",
-        status: write_file_if_missing(&claw_json, STARTER_FRAUDE_JSON)?,
+        status: write_file_if_missing(&fraude_json, STARTER_FRAUDE_JSON)?,
     });
 
     let gitignore = cwd.join(".gitignore");
@@ -98,11 +98,11 @@ pub(crate) fn initialize_repo(cwd: &Path) -> Result<InitReport, Box<dyn std::err
         status: ensure_gitignore_entries(&gitignore)?,
     });
 
-    let claw_md = cwd.join("FRAUDE.md");
+    let fraude_md = cwd.join("FRAUDE.md");
     let content = render_init_fraude_md(cwd);
     artifacts.push(InitArtifact {
         name: "FRAUDE.md",
-        status: write_file_if_missing(&claw_md, &content)?,
+        status: write_file_if_missing(&fraude_md, &content)?,
     });
 
     Ok(InitReport {
@@ -164,7 +164,8 @@ pub(crate) fn render_init_fraude_md(cwd: &Path) -> String {
     let mut lines = vec![
         "# FRAUDE.md".to_string(),
         String::new(),
-        "This file provides guidance to Fraude when working with code in this repository.".to_string(),
+        "This file provides guidance to Fraude when working with code in this repository."
+            .to_string(),
         String::new(),
     ];
 
@@ -374,9 +375,9 @@ mod tests {
         let gitignore = fs::read_to_string(root.join(".gitignore")).expect("read gitignore");
         assert!(gitignore.contains(".fraude/settings.local.json"));
         assert!(gitignore.contains(".fraude/sessions/"));
-        let claw_md = fs::read_to_string(root.join("FRAUDE.md")).expect("read claw md");
-        assert!(claw_md.contains("Languages: Rust."));
-        assert!(claw_md.contains("cargo clippy --workspace --all-targets -- -D warnings"));
+        let fraude_md = fs::read_to_string(root.join("FRAUDE.md")).expect("read fraude md");
+        assert!(fraude_md.contains("Languages: Rust."));
+        assert!(fraude_md.contains("cargo clippy --workspace --all-targets -- -D warnings"));
 
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }
@@ -386,12 +387,15 @@ mod tests {
         let root = temp_dir();
         fs::create_dir_all(&root).expect("create root");
         fs::write(root.join("FRAUDE.md"), "custom guidance\n").expect("write existing claw md");
-        fs::write(root.join(".gitignore"), ".fraude/settings.local.json\n").expect("write gitignore");
+        fs::write(root.join(".gitignore"), ".fraude/settings.local.json\n")
+            .expect("write gitignore");
 
         let first = initialize_repo(&root).expect("first init should succeed");
-        assert!(first
-            .render()
-            .contains("FRAUDE.md        skipped (already exists)"));
+        assert!(
+            first
+                .render()
+                .contains("FRAUDE.md        skipped (already exists)")
+        );
         let second = initialize_repo(&root).expect("second init should succeed");
         let second_rendered = second.render();
         assert!(second_rendered.contains(".fraude/         skipped (already exists)"));

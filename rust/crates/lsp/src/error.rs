@@ -41,7 +41,9 @@ impl Display for LspError {
                 f,
                 "duplicate LSP extension mapping for {extension}: {existing_server} and {new_server}"
             ),
-            Self::PathToUrl(path) => write!(f, "failed to convert path to file URL: {}", path.display()),
+            Self::PathToUrl(path) => {
+                write!(f, "failed to convert path to file URL: {}", path.display())
+            }
             Self::Protocol(message) => write!(f, "LSP protocol error: {message}"),
         }
     }

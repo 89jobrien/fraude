@@ -8,11 +8,11 @@ use tokio::process::Command as TokioCommand;
 use tokio::runtime::Builder;
 use tokio::time::timeout;
 
-use crate::sandbox::{
-    build_linux_sandbox_command, resolve_sandbox_status_for_request, FilesystemIsolationMode,
-    SandboxConfig, SandboxStatus,
-};
 use crate::ConfigLoader;
+use crate::sandbox::{
+    FilesystemIsolationMode, SandboxConfig, SandboxStatus, build_linux_sandbox_command,
+    resolve_sandbox_status_for_request,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BashCommandInput {
@@ -246,7 +246,7 @@ fn prepare_sandbox_dirs(cwd: &std::path::Path) {
 
 #[cfg(test)]
 mod tests {
-    use super::{execute_bash, BashCommandInput};
+    use super::{BashCommandInput, execute_bash};
     use crate::sandbox::FilesystemIsolationMode;
 
     #[test]

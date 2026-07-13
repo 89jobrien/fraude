@@ -8,7 +8,7 @@ use crux_types::step::{Step, StepKind, StepStatus};
 use serde::{Deserialize, Serialize};
 
 use crate::compact::{
-    compact_session, estimate_session_tokens, CompactionConfig, CompactionResult,
+    CompactionConfig, CompactionResult, compact_session, estimate_session_tokens,
 };
 use crate::config::RuntimeFeatureConfig;
 use crate::hooks::{HookRunResult, HookRunner};
@@ -230,10 +230,10 @@ where
                         let pre_hook_result = self.hook_runner.run_pre_tool_use(&tool_name, &input);
                         if pre_hook_result.is_denied() {
                             let deny_message = format!("PreToolUse hook denied tool `{tool_name}`");
-                            let output_text =
-                                format_hook_message(&pre_hook_result, &deny_message);
-                            let duration_ms =
-                                (Utc::now() - step_started).num_milliseconds().unsigned_abs();
+                            let output_text = format_hook_message(&pre_hook_result, &deny_message);
+                            let duration_ms = (Utc::now() - step_started)
+                                .num_milliseconds()
+                                .unsigned_abs();
                             steps.push(Step {
                                 name: tool_name.clone(),
                                 kind: StepKind::Plain,
@@ -281,8 +281,9 @@ where
                             } else {
                                 StepStatus::Ok
                             };
-                            let duration_ms =
-                                (Utc::now() - step_started).num_milliseconds().unsigned_abs();
+                            let duration_ms = (Utc::now() - step_started)
+                                .num_milliseconds()
+                                .unsigned_abs();
                             steps.push(Step {
                                 name: tool_name.clone(),
                                 kind: StepKind::Plain,
@@ -309,8 +310,9 @@ where
                         }
                     }
                     PermissionOutcome::Deny { reason } => {
-                        let duration_ms =
-                            (Utc::now() - step_started).num_milliseconds().unsigned_abs();
+                        let duration_ms = (Utc::now() - step_started)
+                            .num_milliseconds()
+                            .unsigned_abs();
                         steps.push(Step {
                             name: tool_name.clone(),
                             kind: StepKind::Plain,
@@ -509,10 +511,12 @@ mod tests {
             self.call_count += 1;
             match self.call_count {
                 1 => {
-                    assert!(request
-                        .messages
-                        .iter()
-                        .any(|message| message.role == MessageRole::User));
+                    assert!(
+                        request
+                            .messages
+                            .iter()
+                            .any(|message| message.role == MessageRole::User)
+                    );
                     Ok(vec![
                         AssistantEvent::TextDelta("Let me calculate that.".to_string()),
                         AssistantEvent::ToolUse {
@@ -752,10 +756,12 @@ mod tests {
                         AssistantEvent::MessageStop,
                     ]),
                     2 => {
-                        assert!(request
-                            .messages
-                            .iter()
-                            .any(|message| message.role == MessageRole::Tool));
+                        assert!(
+                            request
+                                .messages
+                                .iter()
+                                .any(|message| message.role == MessageRole::Tool)
+                        );
                         Ok(vec![
                             AssistantEvent::TextDelta("done".to_string()),
                             AssistantEvent::MessageStop,

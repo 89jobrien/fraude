@@ -72,9 +72,9 @@ impl RemoteSessionContext {
     #[must_use]
     pub fn from_env_map(env_map: &BTreeMap<String, String>) -> Self {
         Self {
-            enabled: env_truthy(env_map.get("CLAW_CODE_REMOTE")),
+            enabled: env_truthy(env_map.get("FRAUDE_REMOTE")),
             session_id: env_map
-                .get("CLAW_CODE_REMOTE_SESSION_ID")
+                .get("FRAUDE_REMOTE_SESSION_ID")
                 .filter(|value| !value.is_empty())
                 .cloned(),
             base_url: env_map
@@ -253,8 +253,8 @@ fn env_truthy(value: Option<&String>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        inherited_upstream_proxy_env, no_proxy_list, read_token, upstream_proxy_ws_url,
-        RemoteSessionContext, UpstreamProxyBootstrap,
+        RemoteSessionContext, UpstreamProxyBootstrap, inherited_upstream_proxy_env, no_proxy_list,
+        read_token, upstream_proxy_ws_url,
     };
     use std::collections::BTreeMap;
     use std::fs;
@@ -272,9 +272,9 @@ mod tests {
     #[test]
     fn remote_context_reads_env_state() {
         let env = BTreeMap::from([
-            ("CLAW_CODE_REMOTE".to_string(), "true".to_string()),
+            ("FRAUDE_REMOTE".to_string(), "true".to_string()),
             (
-                "CLAW_CODE_REMOTE_SESSION_ID".to_string(),
+                "FRAUDE_REMOTE_SESSION_ID".to_string(),
                 "session-123".to_string(),
             ),
             (
@@ -291,7 +291,7 @@ mod tests {
     #[test]
     fn bootstrap_fails_open_when_token_or_session_is_missing() {
         let env = BTreeMap::from([
-            ("CLAW_CODE_REMOTE".to_string(), "1".to_string()),
+            ("FRAUDE_REMOTE".to_string(), "1".to_string()),
             ("CCR_UPSTREAM_PROXY_ENABLED".to_string(), "true".to_string()),
         ]);
         let bootstrap = UpstreamProxyBootstrap::from_env_map(&env);
@@ -307,10 +307,10 @@ mod tests {
         fs::write(&token_path, "secret-token\n").expect("write token");
 
         let env = BTreeMap::from([
-            ("CLAW_CODE_REMOTE".to_string(), "1".to_string()),
+            ("FRAUDE_REMOTE".to_string(), "1".to_string()),
             ("CCR_UPSTREAM_PROXY_ENABLED".to_string(), "true".to_string()),
             (
-                "CLAW_CODE_REMOTE_SESSION_ID".to_string(),
+                "FRAUDE_REMOTE_SESSION_ID".to_string(),
                 "session-123".to_string(),
             ),
             (

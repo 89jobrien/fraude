@@ -16,9 +16,9 @@
 //! it is agnostic to whether the events come from the [`demo`] producer or the
 //! real agent loop.
 
+mod demo;
 mod events;
 mod highlight;
-mod demo;
 
 pub use events::{AgentEvent, DiffKind, FileStatus, LogEntry};
 
@@ -27,6 +27,7 @@ use std::sync::mpsc::{Receiver, TryRecvError};
 use std::time::{Duration, Instant};
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -34,7 +35,6 @@ use ratatui::widgets::{
     Block, Borders, Gauge, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation,
     ScrollbarState, Wrap,
 };
-use ratatui::Frame;
 
 /// How often we force a repaint even with no new events (drives the spinner).
 const TICK: Duration = Duration::from_millis(33); // ~30 fps
@@ -162,15 +162,14 @@ fn event_loop(
         terminal.draw(|frame| draw(frame, app))?;
 
         let timeout = TICK.saturating_sub(last_tick.elapsed());
-        if event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    let ctrl_c =
-                        key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c');
-                    if ctrl_c || matches!(key.code, KeyCode::Char('q') | KeyCode::Esc) {
-                        app.quit = true;
-                    }
-                }
+        if event::poll(timeout)?
+            && let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press
+        {
+            let ctrl_c =
+                key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c');
+            if ctrl_c || matches!(key.code, KeyCode::Char('q') | KeyCode::Esc) {
+                app.quit = true;
             }
         }
 
@@ -190,8 +189,8 @@ fn draw(frame: &mut Frame, app: &App) {
     let root = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // header
-            Constraint::Min(8),    // top half (logs + workspace)
+            Constraint::Length(3),      // header
+            Constraint::Min(8),         // top half (logs + workspace)
             Constraint::Percentage(45), // diff
         ])
         .split(frame.area());
@@ -223,15 +222,29 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &App) {
         Color::Yellow
     };
     let title = Line::from(vec![
-        Span::styled(" claw ", Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " claw ",
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw("  "),
         Span::styled(
             format!("{spin} "),
-            Style::default().fg(status_color).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(status_color)
+                .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            if app.status.is_empty() { "working…" } else { &app.status },
-            Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+            if app.status.is_empty() {
+                "working…"
+            } else {
+                &app.status
+            },
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
         ),
     ]);
     let block = Block::default()
@@ -250,7 +263,9 @@ fn draw_logs(frame: &mut Frame, area: Rect, app: &App) {
             ListItem::new(Line::from(vec![
                 Span::styled(
                     format!("[{}] ", entry.stage),
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(entry.detail.clone(), Style::default().fg(Color::Gray)),
             ]))
@@ -308,7 +323,9 @@ fn draw_legend(frame: &mut Frame, area: Rect, app: &App) {
             vec![
                 Span::styled(
                     format!("{} ", s.glyph()),
-                    Style::default().fg(status_color(*s)).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(status_color(*s))
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(format!("{}  ", s.label()), Style::default().fg(Color::Gray)),
             ]
@@ -325,7 +342,11 @@ fn draw_legend(frame: &mut Frame, area: Rect, app: &App) {
 
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Min(0)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(0),
+        ])
         .split(inner);
 
     frame.render_widget(Paragraph::new(legend), rows[0]);
@@ -379,7 +400,9 @@ fn render_diff_line(line: &DiffLine) -> Line<'static> {
     match line.kind {
         DiffKind::Hunk => Line::from(Span::styled(
             line.text.clone(),
-            Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
         )),
         DiffKind::Removed => {
             let base = Style::default().fg(Color::Red).bg(Color::Rgb(40, 16, 16));
@@ -391,7 +414,10 @@ fn render_diff_line(line: &DiffLine) -> Line<'static> {
             let base = Style::default().bg(Color::Rgb(12, 36, 16));
             let mut spans = vec![Span::styled(
                 "+ ",
-                Style::default().fg(Color::Green).bg(Color::Rgb(12, 36, 16)).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Green)
+                    .bg(Color::Rgb(12, 36, 16))
+                    .add_modifier(Modifier::BOLD),
             )];
             spans.extend(highlight::highlight_line(&line.text, base));
             Line::from(spans)

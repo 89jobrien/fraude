@@ -242,11 +242,11 @@ pub fn build_linux_sandbox_command(
         ("HOME".to_string(), sandbox_home.display().to_string()),
         ("TMPDIR".to_string(), sandbox_tmp.display().to_string()),
         (
-            "CLAW_SANDBOX_FILESYSTEM_MODE".to_string(),
+            "FRAUDE_SANDBOX_FILESYSTEM_MODE".to_string(),
             status.filesystem_mode.as_str().to_string(),
         ),
         (
-            "CLAW_SANDBOX_ALLOWED_MOUNTS".to_string(),
+            "FRAUDE_SANDBOX_ALLOWED_MOUNTS".to_string(),
             status.allowed_mounts.join(":"),
         ),
     ];
@@ -285,8 +285,8 @@ fn command_exists(command: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_linux_sandbox_command, detect_container_environment_from, FilesystemIsolationMode,
-        SandboxConfig, SandboxDetectionInputs,
+        FilesystemIsolationMode, SandboxConfig, SandboxDetectionInputs,
+        build_linux_sandbox_command, detect_container_environment_from,
     };
     use std::path::Path;
 
@@ -300,18 +300,24 @@ mod tests {
         });
 
         assert!(detected.in_container);
-        assert!(detected
-            .markers
-            .iter()
-            .any(|marker| marker == "/.dockerenv"));
-        assert!(detected
-            .markers
-            .iter()
-            .any(|marker| marker == "env:container=docker"));
-        assert!(detected
-            .markers
-            .iter()
-            .any(|marker| marker == "/proc/1/cgroup:docker"));
+        assert!(
+            detected
+                .markers
+                .iter()
+                .any(|marker| marker == "/.dockerenv")
+        );
+        assert!(
+            detected
+                .markers
+                .iter()
+                .any(|marker| marker == "env:container=docker")
+        );
+        assert!(
+            detected
+                .markers
+                .iter()
+                .any(|marker| marker == "/proc/1/cgroup:docker")
+        );
     }
 
     #[test]

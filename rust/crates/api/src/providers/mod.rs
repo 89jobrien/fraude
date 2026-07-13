@@ -213,7 +213,7 @@ pub fn max_tokens_for_model(model: &str) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{detect_provider_kind, max_tokens_for_model, resolve_model_alias, ProviderKind};
+    use super::{ProviderKind, detect_provider_kind, max_tokens_for_model, resolve_model_alias};
 
     #[test]
     fn resolves_grok_aliases() {

@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use async_stream::stream;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use runtime::{ConversationMessage, Session as RuntimeSession};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 
 pub type SessionId = String;
 pub type SessionStore = Arc<RwLock<HashMap<SessionId, Session>>>;
@@ -278,7 +278,7 @@ fn not_found(message: String) -> ApiError {
 #[cfg(test)]
 mod tests {
     use super::{
-        app, AppState, CreateSessionResponse, ListSessionsResponse, SessionDetailsResponse,
+        AppState, CreateSessionResponse, ListSessionsResponse, SessionDetailsResponse, app,
     };
     use reqwest::Client;
     use std::net::SocketAddr;

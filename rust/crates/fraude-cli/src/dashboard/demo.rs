@@ -69,7 +69,10 @@ fn script(tx: &Sender<AgentEvent>) -> Result<(), ()> {
         "tests/auth_test.rs",
     ];
 
-    send(tx, AgentEvent::Status("Planning: refactor token validation".into()))?;
+    send(
+        tx,
+        AgentEvent::Status("Planning: refactor token validation".into()),
+    )?;
     for f in files {
         send(
             tx,
@@ -79,7 +82,11 @@ fn script(tx: &Sender<AgentEvent>) -> Result<(), ()> {
             },
         )?;
     }
-    log(tx, "Plan", "Refactor expired-token handling in the auth layer")?;
+    log(
+        tx,
+        "Plan",
+        "Refactor expired-token handling in the auth layer",
+    )?;
     pause(500);
 
     // Scan phase ---------------------------------------------------------
@@ -109,7 +116,11 @@ fn script(tx: &Sender<AgentEvent>) -> Result<(), ()> {
         send(tx, AgentEvent::Progress(8 + scanned * 5))?;
     }
 
-    log(tx, "Reasoning", "Token expiry checked in 2 places; unify it")?;
+    log(
+        tx,
+        "Reasoning",
+        "Token expiry checked in 2 places; unify it",
+    )?;
     pause(400);
 
     // Edit phase: src/auth/token.rs -------------------------------------
@@ -133,27 +144,50 @@ fn script(tx: &Sender<AgentEvent>) -> Result<(), ()> {
     pause(250);
 
     type_line(tx, DiffKind::Hunk, "@@ -14,9 +14,14 @@ impl Token {")?;
-    type_line(tx, DiffKind::Context, "pub fn validate(&self, now: SystemTime) -> Result<Claims, AuthError> {")?;
-    type_line(tx, DiffKind::Removed, "let expired = now > self.expires_at;")?;
+    type_line(
+        tx,
+        DiffKind::Context,
+        "pub fn validate(&self, now: SystemTime) -> Result<Claims, AuthError> {",
+    )?;
+    type_line(
+        tx,
+        DiffKind::Removed,
+        "let expired = now > self.expires_at;",
+    )?;
     type_line(tx, DiffKind::Removed, "if expired {")?;
     type_line(tx, DiffKind::Removed, "    return Err(AuthError::Expired);")?;
     type_line(tx, DiffKind::Removed, "}")?;
     type_line(tx, DiffKind::Added, "if self.is_expired(now) {")?;
     type_line(tx, DiffKind::Added, "    return Err(AuthError::Expired);")?;
     type_line(tx, DiffKind::Added, "}")?;
-    type_line(tx, DiffKind::Context, "    let claims = self.decode_claims()?;")?;
-    type_line(tx, DiffKind::Added, "    // Centralized expiry keeps refresh logic in one place.")?;
+    type_line(
+        tx,
+        DiffKind::Context,
+        "    let claims = self.decode_claims()?;",
+    )?;
+    type_line(
+        tx,
+        DiffKind::Added,
+        "    // Centralized expiry keeps refresh logic in one place.",
+    )?;
     type_line(tx, DiffKind::Context, "    Ok(claims)")?;
     type_line(tx, DiffKind::Context, "}")?;
     type_line(tx, DiffKind::Added, "")?;
-    type_line(tx, DiffKind::Added, "fn is_expired(&self, now: SystemTime) -> bool {")?;
+    type_line(
+        tx,
+        DiffKind::Added,
+        "fn is_expired(&self, now: SystemTime) -> bool {",
+    )?;
     type_line(tx, DiffKind::Added, "    now > self.expires_at")?;
     type_line(tx, DiffKind::Added, "}")?;
     pause(400);
 
     // Edit phase: src/server/handler.rs ---------------------------------
     send(tx, AgentEvent::Progress(82))?;
-    send(tx, AgentEvent::Status("Editing src/server/handler.rs".into()))?;
+    send(
+        tx,
+        AgentEvent::Status("Editing src/server/handler.rs".into()),
+    )?;
     send(
         tx,
         AgentEvent::File {
@@ -171,13 +205,21 @@ fn script(tx: &Sender<AgentEvent>) -> Result<(), ()> {
     )?;
     pause(250);
 
-    type_line(tx, DiffKind::Hunk, "@@ -42,8 +42,7 @@ async fn handle(req: Request) -> Response {")?;
+    type_line(
+        tx,
+        DiffKind::Hunk,
+        "@@ -42,8 +42,7 @@ async fn handle(req: Request) -> Response {",
+    )?;
     type_line(tx, DiffKind::Context, "    let token = bearer(&req)?;")?;
     type_line(tx, DiffKind::Removed, "let now = SystemTime::now();")?;
     type_line(tx, DiffKind::Removed, "if now > token.expires_at {")?;
     type_line(tx, DiffKind::Removed, "    return unauthorized();")?;
     type_line(tx, DiffKind::Removed, "}")?;
-    type_line(tx, DiffKind::Added, "let claims = token.validate(SystemTime::now())")?;
+    type_line(
+        tx,
+        DiffKind::Added,
+        "let claims = token.validate(SystemTime::now())",
+    )?;
     type_line(tx, DiffKind::Added, "    .map_err(|_| unauthorized())?;")?;
     type_line(tx, DiffKind::Context, "    dispatch(claims, req).await")?;
     type_line(tx, DiffKind::Context, "}")?;

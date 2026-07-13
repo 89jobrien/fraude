@@ -481,7 +481,7 @@ fn normalize_path_allow_missing(path: &str) -> io::Result<PathBuf> {
 mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use super::{edit_file, glob_search, grep_search, read_file, write_file, GrepSearchInput};
+    use super::{GrepSearchInput, edit_file, glob_search, grep_search, read_file, write_file};
 
     fn temp_path(name: &str) -> std::path::PathBuf {
         let unique = SystemTime::now()

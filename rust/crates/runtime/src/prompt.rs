@@ -431,7 +431,7 @@ fn render_config_section(config: &RuntimeConfig) -> String {
     let mut lines = vec!["# Runtime config".to_string()];
     if config.loaded_entries().is_empty() {
         lines.extend(prepend_bullets(vec![
-            "No Claw Code settings files loaded.".to_string()
+            "No Claw Code settings files loaded.".to_string(),
         ]));
         return lines.join("\n");
     }
@@ -503,9 +503,9 @@ fn get_actions_section() -> String {
 #[allow(unsafe_code)]
 mod tests {
     use super::{
+        ContextFile, ProjectContext, SYSTEM_PROMPT_DYNAMIC_BOUNDARY, SystemPromptBuilder,
         collapse_blank_lines, display_context_path, normalize_instruction_content,
         render_instruction_content, render_instruction_files, truncate_instruction_content,
-        ContextFile, ProjectContext, SystemPromptBuilder, SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
     };
     use crate::config::ConfigLoader;
     use std::fs;
@@ -678,7 +678,7 @@ mod tests {
     }
 
     #[test]
-    fn load_system_prompt_reads_claw_files_and_config() {
+    fn load_system_prompt_reads_fraude_files_and_config() {
         let root = temp_dir();
         fs::create_dir_all(root.join(".claw")).expect("claw dir");
         fs::write(root.join("CLAW.md"), "Project rules").expect("write instructions");
@@ -691,10 +691,10 @@ mod tests {
         let _guard = env_lock();
         let previous = std::env::current_dir().expect("cwd");
         let original_home = std::env::var("HOME").ok();
-        let original_claw_home = std::env::var("CLAW_CONFIG_HOME").ok();
+        let original_fraude_home = std::env::var("FRAUDE_CONFIG_HOME").ok();
         unsafe {
             std::env::set_var("HOME", &root);
-            std::env::set_var("CLAW_CONFIG_HOME", root.join("missing-home"));
+            std::env::set_var("FRAUDE_CONFIG_HOME", root.join("missing-home"));
         }
         std::env::set_current_dir(&root).expect("change cwd");
         let prompt = super::load_system_prompt(&root, "2026-03-31", "linux", "6.8")
@@ -711,10 +711,10 @@ mod tests {
             } else {
                 std::env::remove_var("HOME");
             }
-            if let Some(value) = original_claw_home {
-                std::env::set_var("CLAW_CONFIG_HOME", value);
+            if let Some(value) = original_fraude_home {
+                std::env::set_var("FRAUDE_CONFIG_HOME", value);
             } else {
-                std::env::remove_var("CLAW_CONFIG_HOME");
+                std::env::remove_var("FRAUDE_CONFIG_HOME");
             }
         }
 
@@ -724,7 +724,7 @@ mod tests {
     }
 
     #[test]
-    fn renders_claw_code_style_sections_with_project_context() {
+    fn renders_fraude_style_sections_with_project_context() {
         let root = temp_dir();
         fs::create_dir_all(root.join(".claw")).expect("claw dir");
         fs::write(root.join("CLAW.md"), "Project rules").expect("write CLAW.md");
@@ -765,7 +765,7 @@ mod tests {
     }
 
     #[test]
-    fn discovers_dot_claw_instructions_markdown() {
+    fn discovers_dot_fraude_instructions_markdown() {
         let root = temp_dir();
         let nested = root.join("apps").join("api");
         fs::create_dir_all(nested.join(".claw")).expect("nested claw dir");
@@ -776,10 +776,12 @@ mod tests {
         .expect("write instructions.md");
 
         let context = ProjectContext::discover(&nested, "2026-03-31").expect("context should load");
-        assert!(context
-            .instruction_files
-            .iter()
-            .any(|file| file.path.ends_with(".claw/instructions.md")));
+        assert!(
+            context
+                .instruction_files
+                .iter()
+                .any(|file| file.path.ends_with(".claw/instructions.md"))
+        );
         assert!(
             render_instruction_files(&context.instruction_files).contains("instruction markdown")
         );

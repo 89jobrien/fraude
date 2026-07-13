@@ -1110,8 +1110,7 @@ fn normalize_fetch_url(url: &str) -> Result<String, String> {
 }
 
 fn build_search_url(query: &str) -> Result<reqwest::Url, String> {
-    // TODO: rename env var CLAW_WEB_SEARCH_BASE_URL → FRAUDE_WEB_SEARCH_BASE_URL
-    if let Ok(base) = std::env::var("CLAW_WEB_SEARCH_BASE_URL") {
+    if let Ok(base) = std::env::var("FRAUDE_WEB_SEARCH_BASE_URL") {
         let mut url = reqwest::Url::parse(&base).map_err(|error| error.to_string())?;
         url.query_pairs_mut().append_pair("q", query);
         return Ok(url);
@@ -1456,8 +1455,7 @@ fn validate_todos(todos: &[TodoItem]) -> Result<(), String> {
 }
 
 fn todo_store_path() -> Result<std::path::PathBuf, String> {
-    // TODO: rename env var CLAW_TODO_STORE → FRAUDE_TODO_STORE
-    if let Ok(path) = std::env::var("CLAW_TODO_STORE") {
+    if let Ok(path) = std::env::var("FRAUDE_TODO_STORE") {
         return Ok(std::path::PathBuf::from(path));
     }
     let cwd = std::env::current_dir().map_err(|error| error.to_string())?;
@@ -2224,8 +2222,7 @@ fn canonical_tool_token(value: &str) -> String {
 }
 
 fn agent_store_dir() -> Result<std::path::PathBuf, String> {
-    // TODO: rename env var CLAW_AGENT_STORE → FRAUDE_AGENT_STORE
-    if let Ok(path) = std::env::var("CLAW_AGENT_STORE") {
+    if let Ok(path) = std::env::var("FRAUDE_AGENT_STORE") {
         return Ok(std::path::PathBuf::from(path));
     }
     let cwd = std::env::current_dir().map_err(|error| error.to_string())?;
@@ -2778,8 +2775,7 @@ fn config_file_for_scope(scope: ConfigScope) -> Result<PathBuf, String> {
 }
 
 fn config_home_dir() -> Result<PathBuf, String> {
-    // TODO: rename env var CLAW_CONFIG_HOME → FRAUDE_CONFIG_HOME
-    if let Ok(path) = std::env::var("CLAW_CONFIG_HOME") {
+    if let Ok(path) = std::env::var("FRAUDE_CONFIG_HOME") {
         return Ok(PathBuf::from(path));
     }
     let home = std::env::var("HOME").map_err(|_| String::from("HOME is not set"))?;
@@ -3234,7 +3230,7 @@ mod tests {
 
         unsafe {
             std::env::set_var(
-                "CLAW_WEB_SEARCH_BASE_URL",
+                "FRAUDE_WEB_SEARCH_BASE_URL",
                 format!("http://{}/search", server.addr()),
             );
         }
@@ -3248,7 +3244,7 @@ mod tests {
         )
         .expect("WebSearch should succeed");
         unsafe {
-            std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+            std::env::remove_var("FRAUDE_WEB_SEARCH_BASE_URL");
         }
 
         let output: serde_json::Value = serde_json::from_str(&result).expect("valid json");
@@ -3286,7 +3282,7 @@ mod tests {
 
         unsafe {
             std::env::set_var(
-                "CLAW_WEB_SEARCH_BASE_URL",
+                "FRAUDE_WEB_SEARCH_BASE_URL",
                 format!("http://{}/fallback", server.addr()),
             );
         }
@@ -3298,7 +3294,7 @@ mod tests {
         )
         .expect("WebSearch fallback parsing should succeed");
         unsafe {
-            std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+            std::env::remove_var("FRAUDE_WEB_SEARCH_BASE_URL");
         }
 
         let output: serde_json::Value = serde_json::from_str(&result).expect("valid json");
@@ -3313,12 +3309,12 @@ mod tests {
         assert_eq!(content[1]["url"], "https://docs.rs/tokio");
 
         unsafe {
-            std::env::set_var("CLAW_WEB_SEARCH_BASE_URL", "://bad-base-url");
+            std::env::set_var("FRAUDE_WEB_SEARCH_BASE_URL", "://bad-base-url");
         }
         let error = execute_tool("WebSearch", &json!({ "query": "generic links" }))
             .expect_err("invalid base URL should fail");
         unsafe {
-            std::env::remove_var("CLAW_WEB_SEARCH_BASE_URL");
+            std::env::remove_var("FRAUDE_WEB_SEARCH_BASE_URL");
         }
         assert!(error.contains("relative URL without a base") || error.contains("empty host"));
     }
@@ -3387,7 +3383,7 @@ mod tests {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let path = temp_path("todos.json");
         unsafe {
-            std::env::set_var("CLAW_TODO_STORE", &path);
+            std::env::set_var("FRAUDE_TODO_STORE", &path);
         }
 
         let first = execute_tool(
@@ -3415,7 +3411,7 @@ mod tests {
         )
         .expect("TodoWrite should succeed");
         unsafe {
-            std::env::remove_var("CLAW_TODO_STORE");
+            std::env::remove_var("FRAUDE_TODO_STORE");
         }
         let _ = std::fs::remove_file(path);
 
@@ -3438,7 +3434,7 @@ mod tests {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let path = temp_path("todos-errors.json");
         unsafe {
-            std::env::set_var("CLAW_TODO_STORE", &path);
+            std::env::set_var("FRAUDE_TODO_STORE", &path);
         }
 
         let empty = execute_tool("TodoWrite", &json!({ "todos": [] }))
@@ -3480,7 +3476,7 @@ mod tests {
         )
         .expect("completed todos should succeed");
         unsafe {
-            std::env::remove_var("CLAW_TODO_STORE");
+            std::env::remove_var("FRAUDE_TODO_STORE");
         }
         let _ = fs::remove_file(path);
 
@@ -3602,7 +3598,7 @@ mod tests {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = temp_path("agent-store");
         unsafe {
-            std::env::set_var("CLAW_AGENT_STORE", &dir);
+            std::env::set_var("FRAUDE_AGENT_STORE", &dir);
         }
         let captured = Arc::new(Mutex::new(None::<AgentJob>));
         let captured_for_spawn = Arc::clone(&captured);
@@ -3624,7 +3620,7 @@ mod tests {
         )
         .expect("Agent should succeed");
         unsafe {
-            std::env::remove_var("CLAW_AGENT_STORE");
+            std::env::remove_var("FRAUDE_AGENT_STORE");
         }
 
         assert_eq!(manifest.name, "ship-audit");
@@ -3683,7 +3679,7 @@ mod tests {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = temp_path("agent-runner");
         unsafe {
-            std::env::set_var("CLAW_AGENT_STORE", &dir);
+            std::env::set_var("FRAUDE_AGENT_STORE", &dir);
         }
 
         let completed = execute_agent_with_spawn(
@@ -3767,7 +3763,7 @@ mod tests {
         assert!(spawn_error_manifest.contains("thread creation failed"));
 
         unsafe {
-            std::env::remove_var("CLAW_AGENT_STORE");
+            std::env::remove_var("FRAUDE_AGENT_STORE");
         }
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -4316,13 +4312,13 @@ mod tests {
         .expect("write global settings");
 
         let original_home = std::env::var("HOME").ok();
-        let original_config_home = std::env::var("CLAW_CONFIG_HOME").ok();
+        let original_config_home = std::env::var("FRAUDE_CONFIG_HOME").ok();
         let original_dir = std::env::current_dir().expect("cwd");
         unsafe {
             std::env::set_var("HOME", &home);
         }
         unsafe {
-            std::env::remove_var("CLAW_CONFIG_HOME");
+            std::env::remove_var("FRAUDE_CONFIG_HOME");
         }
         std::env::set_current_dir(&cwd).expect("set cwd");
 
@@ -4357,8 +4353,8 @@ mod tests {
             None => unsafe { std::env::remove_var("HOME") },
         }
         match original_config_home {
-            Some(value) => unsafe { std::env::set_var("CLAW_CONFIG_HOME", value) },
-            None => unsafe { std::env::remove_var("CLAW_CONFIG_HOME") },
+            Some(value) => unsafe { std::env::set_var("FRAUDE_CONFIG_HOME", value) },
+            None => unsafe { std::env::remove_var("FRAUDE_CONFIG_HOME") },
         }
         let _ = std::fs::remove_dir_all(root);
     }

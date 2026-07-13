@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::json::JsonValue;
 use crate::sandbox::{FilesystemIsolationMode, SandboxConfig};
 
-pub const CLAW_SETTINGS_SCHEMA_NAME: &str = "SettingsSchema";
+pub const FRAUDE_SETTINGS_SCHEMA_NAME: &str = "SettingsSchema";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ConfigSource {
@@ -420,7 +420,7 @@ impl RuntimePluginConfig {
 
 #[must_use]
 pub fn default_config_home() -> PathBuf {
-    std::env::var_os("CLAW_CONFIG_HOME")
+    std::env::var_os("FRAUDE_CONFIG_HOME")
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".claw")))
         .unwrap_or_else(|| PathBuf::from(".claw"))
@@ -939,8 +939,8 @@ fn push_unique(target: &mut Vec<String>, value: String) {
 #[cfg(test)]
 mod tests {
     use super::{
-        ConfigLoader, ConfigSource, McpServerConfig, McpTransport, ResolvedPermissionMode,
-        CLAW_SETTINGS_SCHEMA_NAME,
+        FRAUDE_SETTINGS_SCHEMA_NAME, ConfigLoader, ConfigSource, McpServerConfig, McpTransport,
+        ResolvedPermissionMode,
     };
     use crate::json::JsonValue;
     use crate::sandbox::FilesystemIsolationMode;
@@ -967,15 +967,17 @@ mod tests {
         let error = ConfigLoader::new(&cwd, &home)
             .load()
             .expect_err("config should fail");
-        assert!(error
-            .to_string()
-            .contains("top-level settings value must be a JSON object"));
+        assert!(
+            error
+                .to_string()
+                .contains("top-level settings value must be a JSON object")
+        );
 
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }
 
     #[test]
-    fn loads_and_merges_claw_code_config_files_by_precedence() {
+    fn loads_and_merges_fraude_config_files_by_precedence() {
         let root = temp_dir();
         let cwd = root.join("project");
         let home = root.join("home").join(".claw");
@@ -1012,7 +1014,7 @@ mod tests {
             .load()
             .expect("config should load");
 
-        assert_eq!(CLAW_SETTINGS_SCHEMA_NAME, "SettingsSchema");
+        assert_eq!(FRAUDE_SETTINGS_SCHEMA_NAME, "SettingsSchema");
         assert_eq!(loaded.loaded_entries().len(), 5);
         assert_eq!(loaded.loaded_entries()[0].source, ConfigSource::User);
         assert_eq!(
@@ -1032,16 +1034,20 @@ mod tests {
                 .len(),
             4
         );
-        assert!(loaded
-            .get("hooks")
-            .and_then(JsonValue::as_object)
-            .expect("hooks object")
-            .contains_key("PreToolUse"));
-        assert!(loaded
-            .get("hooks")
-            .and_then(JsonValue::as_object)
-            .expect("hooks object")
-            .contains_key("PostToolUse"));
+        assert!(
+            loaded
+                .get("hooks")
+                .and_then(JsonValue::as_object)
+                .expect("hooks object")
+                .contains_key("PreToolUse")
+        );
+        assert!(
+            loaded
+                .get("hooks")
+                .and_then(JsonValue::as_object)
+                .expect("hooks object")
+                .contains_key("PostToolUse")
+        );
         assert_eq!(loaded.hooks().pre_tool_use(), &["base".to_string()]);
         assert_eq!(loaded.hooks().post_tool_use(), &["project".to_string()]);
         assert!(loaded.mcp().get("home").is_some());
@@ -1285,9 +1291,11 @@ mod tests {
         let error = ConfigLoader::new(&cwd, &home)
             .load()
             .expect_err("config should fail");
-        assert!(error
-            .to_string()
-            .contains("mcpServers.broken: missing string field url"));
+        assert!(
+            error
+                .to_string()
+                .contains("mcpServers.broken: missing string field url")
+        );
 
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }

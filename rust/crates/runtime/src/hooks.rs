@@ -338,10 +338,12 @@ mod tests {
         let result = runner.run_pre_tool_use("Edit", r#"{"file":"src/lib.rs"}"#);
 
         assert!(!result.is_denied());
-        assert!(result
-            .messages()
-            .iter()
-            .any(|message| message.contains("allowing tool execution to continue")));
+        assert!(
+            result
+                .messages()
+                .iter()
+                .any(|message| message.contains("allowing tool execution to continue"))
+        );
     }
 
     #[cfg(windows)]

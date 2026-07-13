@@ -299,6 +299,7 @@ impl OpenAiSseParser {
 }
 
 #[derive(Debug)]
+// TODO: refactor StreamState to replace bool fields with a single state enum
 #[allow(clippy::struct_excessive_bools)]
 struct StreamState {
     model: String,
@@ -500,6 +501,7 @@ impl ToolCallState {
         self.openai_index + 1
     }
 
+    // TODO: change return type to Option<ContentBlockStartEvent> — the Err variant is unreachable
     #[allow(clippy::unnecessary_wraps)]
     fn start_event(&self) -> Result<Option<ContentBlockStartEvent>, ApiError> {
         let Some(name) = self.name.clone() else {
