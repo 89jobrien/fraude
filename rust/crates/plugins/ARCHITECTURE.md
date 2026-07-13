@@ -8,7 +8,7 @@ Central coordinator and public exports. Implements `PluginManager` and
 Key functions:
 
 - `builtin_plugins()`: Returns hardcoded example builtin plugin
-- `load_plugin_from_directory()`: Load manifest from `.claw-plugin/plugin.json`
+- `load_plugin_from_directory()`: Load manifest from `.fraude-plugin/plugin.json`
   or `plugin.json`
 - `discover_plugin_dirs()`: Recursively scan directory for manifest presence
 - Plugin ID generation: `plugin_id()` format `{name}@{marketplace}`
@@ -115,8 +115,8 @@ Raw JSON → `RawPluginManifest` → Validation → `PluginManifest`
 3. Spawn subprocess:
    - Command from manifest
    - Args from manifest
-   - Env: CLAW_PLUGIN_ID, CLAW_PLUGIN_NAME, CLAW_TOOL_NAME,
-     CLAW_TOOL_INPUT, CLAW_PLUGIN_ROOT
+   - Env: FRAUDE_PLUGIN_ID, FRAUDE_PLUGIN_NAME, FRAUDE_TOOL_NAME,
+     FRAUDE_TOOL_INPUT, FRAUDE_PLUGIN_ROOT
    - cwd: plugin root
    - stdin: piped
    - stdout: piped
@@ -160,7 +160,7 @@ Read on manager creation; written on enable/disable/install/uninstall.
 5. **Deduplication at Registry Level**: Tool name conflicts detected in
    `aggregated_tools()`, not in manager. Centralizes conflict resolution.
 
-6. **Environment Variable Naming**: Plugin env vars prefixed `CLAW_*` to
+6. **Environment Variable Naming**: Plugin env vars prefixed `FRAUDE_*` to
    distinguish from user env. Input JSON also passed via env for convenience.
 
 7. **Install Source Tracking**: Records git URL or local path used for

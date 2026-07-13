@@ -69,8 +69,8 @@ Entry point for plugin operations:
 `PluginTool::execute()`:
 
 1. Serialize input to JSON
-2. Spawn subprocess; pass plugin metadata via env vars (CLAW_PLUGIN_ID,
-   CLAW_PLUGIN_NAME, CLAW_TOOL_NAME, CLAW_TOOL_INPUT)
+2. Spawn subprocess; pass plugin metadata via env vars (FRAUDE_PLUGIN_ID,
+   FRAUDE_PLUGIN_NAME, FRAUDE_TOOL_NAME, FRAUDE_TOOL_INPUT)
 3. Write input JSON to stdin
 4. Capture stdout/stderr
 5. Return stdout on success; stderr on failure
