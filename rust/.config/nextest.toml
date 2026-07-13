@@ -1,0 +1,4 @@
+[profile.default]
+# Serialize test binary execution across crates to prevent env var interference
+# between tests that mutate HOME, CODEX_HOME, and similar global state.
+test-threads = 1
