@@ -5,6 +5,9 @@ mod types;
 
 pub use error::LspError;
 pub use manager::LspManager;
+
+#[cfg(feature = "fuzz")]
+pub use client::fuzz_helpers as read_message_fuzz;
 pub use types::{
     FileDiagnostics, LspContextEnrichment, LspServerConfig, SymbolLocation, WorkspaceDiagnostics,
 };

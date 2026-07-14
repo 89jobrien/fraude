@@ -1,0 +1,46 @@
+[workspace]
+
+[package]
+name = "fraude-fuzz"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+libfuzzer-sys = "0.4"
+api = { path = "../crates/api", features = ["fuzz"] }
+lsp = { path = "../crates/lsp", features = ["fuzz"] }
+runtime = { path = "../crates/runtime", features = ["fuzz"] }
+tokio = { version = "1", features = ["rt"] }
+
+[[bin]]
+name = "fuzz_sse_push"
+path = "fuzz_targets/fuzz_sse_push.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_openai_compat_stream"
+path = "fuzz_targets/fuzz_openai_compat_stream.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_lsp_read_message"
+path = "fuzz_targets/fuzz_lsp_read_message.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_percent_decode"
+path = "fuzz_targets/fuzz_percent_decode.rs"
+test = false
+doc = false
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+
+[profile.dev]
+panic = "abort"

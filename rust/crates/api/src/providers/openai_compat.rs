@@ -1052,3 +1052,15 @@ mod tests {
         assert_eq!(normalize_finish_reason("tool_calls"), "tool_use");
     }
 }
+
+#[cfg(feature = "fuzz")]
+pub mod fuzz_helpers {
+    use super::{ApiError, OpenAiSseParser};
+
+    /// Feed an arbitrary byte chunk through the OpenAI-compat SSE parser.
+    /// Returns the number of parsed chunks, or `Err(_)` — must never panic.
+    pub fn push_chunk(chunk: &[u8]) -> Result<usize, ApiError> {
+        let mut parser = OpenAiSseParser::new();
+        parser.push(chunk).map(|chunks| chunks.len())
+    }
+}

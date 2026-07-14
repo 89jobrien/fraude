@@ -471,3 +471,26 @@ fn location_links_to_symbol_locations(links: Vec<LocationLink>) -> Vec<SymbolLoc
 fn uri_to_path(uri: &str) -> Option<PathBuf> {
     url::Url::parse(uri).ok()?.to_file_path().ok()
 }
+
+#[cfg(feature = "fuzz")]
+pub mod fuzz_helpers {
+    use std::io::Cursor;
+
+    use serde_json::Value;
+    use tokio::io::BufReader;
+
+    use crate::error::LspError;
+
+    /// Feed arbitrary bytes through the LSP `read_message` parser.
+    /// Blocks the current thread. Must not panic on any input.
+    pub fn read_message_sync(input: &[u8]) -> Result<Option<Value>, LspError> {
+        tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("tokio runtime")
+            .block_on(async {
+                let cursor = Cursor::new(input.to_vec());
+                let mut reader = BufReader::new(cursor);
+                super::read_message(&mut reader).await
+            })
+    }
+}

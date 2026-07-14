@@ -19,5 +19,8 @@ serde_json.workspace = true
 tokio = { version = "1", features = ["io-util", "macros", "process", "rt", "rt-multi-thread", "time"] }
 walkdir = "2"
 
+[features]
+fuzz = []
+
 [lints]
 workspace = true

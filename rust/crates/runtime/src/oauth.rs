@@ -593,3 +593,14 @@ mod tests {
         assert!(parse_oauth_callback_request_target("/wrong?code=abc").is_err());
     }
 }
+
+#[cfg(feature = "fuzz")]
+pub mod fuzz_helpers {
+    pub fn percent_encode(value: &str) -> String {
+        super::percent_encode(value)
+    }
+
+    pub fn percent_decode(value: &str) -> Result<String, String> {
+        super::percent_decode(value)
+    }
+}

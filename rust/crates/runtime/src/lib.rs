@@ -67,6 +67,8 @@ pub use oauth::{
     loopback_redirect_uri, parse_oauth_callback_query, parse_oauth_callback_request_target,
     save_oauth_credentials,
 };
+#[cfg(feature = "fuzz")]
+pub use oauth::fuzz_helpers as oauth_fuzz;
 pub use permissions::{
     PermissionMode, PermissionOutcome, PermissionPolicy, PermissionPromptDecision,
     PermissionPrompter, PermissionRequest,

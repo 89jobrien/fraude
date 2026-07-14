@@ -4,6 +4,9 @@ mod providers;
 mod sse;
 mod types;
 
+#[cfg(feature = "fuzz")]
+pub use providers::openai_compat::fuzz_helpers as openai_compat_fuzz;
+
 pub use client::{
     MessageStream, OAuthTokenSet, ProviderClient, oauth_token_is_expired, read_base_url,
     read_xai_base_url, resolve_saved_oauth_token, resolve_startup_auth_source,
