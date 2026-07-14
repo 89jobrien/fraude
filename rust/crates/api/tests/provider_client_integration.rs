@@ -39,7 +39,7 @@ fn provider_client_uses_explicit_auth_without_env_lookup() {
 
     let client = ProviderClient::from_model_with_default_auth(
         "claude-sonnet-4-6",
-        Some(AuthSource::ApiKey("claw-test-key".to_string())),
+        Some(AuthSource::ApiKey("fraude-test-key".to_string())),
     )
     .expect("explicit auth should avoid env lookup");
 
