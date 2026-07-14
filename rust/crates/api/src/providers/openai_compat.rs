@@ -12,8 +12,6 @@ use crate::types::{
     ToolChoice, ToolDefinition, ToolResultContentBlock, Usage,
 };
 
-// TODO(fuzz): add fuzz target fuzz_openai_compat_stream — feed arbitrary &[u8] chunks
-//   through OpenAiCompatProvider's SSE stream path; must not panic on any input
 use super::{Provider, ProviderFuture};
 
 pub const DEFAULT_XAI_BASE_URL: &str = "https://api.x.ai/v1";

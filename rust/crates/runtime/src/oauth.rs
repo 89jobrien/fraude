@@ -136,8 +136,6 @@ impl OAuthAuthorizationRequest {
         self
     }
 
-    // TODO(property): build_url output should always be a parseable URL —
-    //   url::Url::parse(&self.build_url()).is_ok() for any valid OAuthAuthorizationRequest
     #[must_use]
     pub fn build_url(&self) -> String {
         let mut params = vec![
@@ -398,9 +396,6 @@ fn base64url_encode(bytes: &[u8]) -> String {
     output
 }
 
-// TODO(property): percent_encode/percent_decode are inverses — add proptest round-trip:
-//   for any arbitrary &str, percent_decode(percent_encode(s)) == Ok(s.to_string())
-// TODO(fuzz): add fuzz target fuzz_percent_decode — any &str input must not panic
 fn percent_encode(value: &str) -> String {
     let mut encoded = String::new();
     for byte in value.bytes() {

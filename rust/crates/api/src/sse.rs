@@ -12,8 +12,6 @@ impl SseParser {
         Self::default()
     }
 
-    // TODO(fuzz): add fuzz target fuzz_sse_push — any &[u8] input must not panic;
-    //   assert that Ok results contain only well-formed StreamEvents
     pub fn push(&mut self, chunk: &[u8]) -> Result<Vec<StreamEvent>, ApiError> {
         self.buffer.extend_from_slice(chunk);
         let mut events = Vec::new();

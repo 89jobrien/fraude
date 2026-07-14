@@ -397,9 +397,6 @@ impl LspClient {
     }
 }
 
-// TODO(unit): add unit tests for read_message covering: missing Content-Length header,
-//   invalid Content-Length value, truncated body, valid single message, multi-message stream
-// TODO(fuzz): add fuzz target fuzz_lsp_read_message — arbitrary &[u8] must not panic
 async fn read_message<R>(reader: &mut BufReader<R>) -> Result<Option<Value>, LspError>
 where
     R: AsyncRead + Unpin,
