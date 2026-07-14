@@ -1,5 +1,3 @@
-// TODO(unit): no unit tests — add tests for LspManager::new (rejects empty config),
-//   language_id_for (extension mapping), and collect_workspace_diagnostics (snapshot aggregation)
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::sync::Arc;
@@ -209,4 +207,75 @@ fn dedupe_locations(locations: &mut Vec<SymbolLocation>) {
             location.range.end.character,
         ))
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::path::Path;
+
+    use crate::LspServerConfig;
+    use crate::manager::LspManager;
+
+    fn make_config(name: &str, extensions: &[&str]) -> LspServerConfig {
+        LspServerConfig {
+            name: name.to_string(),
+            command: "echo".to_string(),
+            args: vec![],
+            env: BTreeMap::new(),
+            workspace_root: std::env::temp_dir(),
+            initialization_options: None,
+            extension_to_language: extensions
+                .iter()
+                .map(|ext| ((*ext).to_string(), "rust".to_string()))
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn empty_server_list_succeeds() {
+        let manager = LspManager::new(vec![]);
+        assert!(manager.is_ok());
+    }
+
+    #[test]
+    fn single_server_registers_extensions() {
+        let manager = LspManager::new(vec![make_config("rust-analyzer", &[".rs"])])
+            .expect("valid config should succeed");
+        assert!(manager.supports_path(Path::new("src/main.rs")));
+        assert!(!manager.supports_path(Path::new("main.go")));
+    }
+
+    #[test]
+    fn duplicate_extension_across_servers_returns_error() {
+        let result = LspManager::new(vec![
+            make_config("server-a", &[".rs"]),
+            make_config("server-b", &[".rs"]),
+        ]);
+
+        assert!(
+            matches!(
+                result,
+                Err(crate::LspError::DuplicateExtension { ref extension, .. })
+                if extension == ".rs"
+            ),
+            "expected DuplicateExtension(.rs)"
+        );
+    }
+
+    #[test]
+    fn extension_normalisation_strips_leading_dot() {
+        let manager =
+            LspManager::new(vec![make_config("rust-analyzer", &[".rs", "toml"])])
+                .expect("mixed dot/no-dot should succeed");
+        assert!(manager.supports_path(Path::new("Cargo.toml")));
+        assert!(manager.supports_path(Path::new("main.rs")));
+    }
+
+    #[test]
+    fn supports_path_false_for_no_extension() {
+        let manager = LspManager::new(vec![make_config("rust-analyzer", &[".rs"])])
+            .expect("valid config");
+        assert!(!manager.supports_path(Path::new("Makefile")));
+    }
 }

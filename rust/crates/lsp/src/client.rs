@@ -472,6 +472,91 @@ fn uri_to_path(uri: &str) -> Option<PathBuf> {
     url::Url::parse(uri).ok()?.to_file_path().ok()
 }
 
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use serde_json::json;
+    use tokio::io::BufReader;
+
+    use super::read_message;
+    use crate::error::LspError;
+
+    fn encode(body: &str) -> Vec<u8> {
+        let mut out = format!("Content-Length: {}\r\n\r\n", body.len()).into_bytes();
+        out.extend_from_slice(body.as_bytes());
+        out
+    }
+
+    async fn call(input: &[u8]) -> Result<Option<serde_json::Value>, LspError> {
+        let mut reader = BufReader::new(Cursor::new(input.to_vec()));
+        read_message(&mut reader).await
+    }
+
+    #[tokio::test]
+    async fn eof_before_any_header_returns_none() {
+        let result = call(b"").await.expect("eof should be Ok(None)");
+        assert_eq!(result, None);
+    }
+
+    #[tokio::test]
+    async fn valid_message_round_trips() {
+        let body = r#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+        let result = call(&encode(body)).await.expect("valid message should parse");
+        assert_eq!(
+            result,
+            Some(json!({"jsonrpc": "2.0", "id": 1, "method": "initialize"}))
+        );
+    }
+
+    #[tokio::test]
+    async fn missing_content_length_header() {
+        let input = b"X-Custom: value\r\n\r\n{}";
+        let err = call(input).await.expect_err("should fail without Content-Length");
+        assert!(
+            matches!(err, LspError::MissingContentLength),
+            "expected MissingContentLength, got {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn malformed_content_length_value() {
+        let input = b"Content-Length: not-a-number\r\n\r\n{}";
+        let err = call(input).await.expect_err("should fail on non-integer Content-Length");
+        assert!(
+            matches!(err, LspError::InvalidContentLength(_)),
+            "expected InvalidContentLength, got {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn partial_body_is_an_io_error() {
+        // Advertise 100 bytes but only supply 5.
+        let input = b"Content-Length: 100\r\n\r\nhello";
+        let err = call(input).await.expect_err("truncated body should fail");
+        assert!(matches!(err, LspError::Io(_)), "expected Io error, got {err}");
+    }
+
+    #[tokio::test]
+    async fn invalid_header_line_without_colon() {
+        let input = b"BadHeaderNoColon\r\n\r\n{}";
+        let err = call(input).await.expect_err("malformed header should fail");
+        assert!(
+            matches!(err, LspError::InvalidHeader(_)),
+            "expected InvalidHeader, got {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn body_not_valid_json() {
+        let body = b"not json at all";
+        let mut raw = format!("Content-Length: {}\r\n\r\n", body.len()).into_bytes();
+        raw.extend_from_slice(body);
+        let err = call(&raw).await.expect_err("non-JSON body should fail");
+        assert!(matches!(err, LspError::Json(_)), "expected Json error, got {err}");
+    }
+}
+
 #[cfg(feature = "fuzz")]
 pub mod fuzz_helpers {
     use std::io::Cursor;

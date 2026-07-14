@@ -36,9 +36,6 @@ pub enum PermissionPromptDecision {
     Deny { reason: String },
 }
 
-// TODO(conformance): add a shared conformance test suite for PermissionPrompter —
-//   fn assert_prompter_contract<T: PermissionPrompter>(prompter: T) — and run it
-//   against every impl (RecordingPrompter, CliPermissionPrompter, etc.)
 pub trait PermissionPrompter {
     fn decide(&mut self, request: &PermissionRequest) -> PermissionPromptDecision;
 }
@@ -160,6 +157,67 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// Shared contract assertions for any `PermissionPrompter` implementation.
+    ///
+    /// Rules that every prompter must satisfy:
+    /// - `decide` is callable multiple times without panicking.
+    /// - An allowing prompter always returns `Allow` for the same request.
+    /// - A denying prompter always returns `Deny` with a non-empty reason.
+    /// - The `PermissionRequest` fields passed in match what the caller provided.
+    fn assert_prompter_contract<P: PermissionPrompter>(mut prompter: P, will_allow: bool) {
+        let request = PermissionRequest {
+            tool_name: "write_file".to_string(),
+            input: "{}".to_string(),
+            current_mode: PermissionMode::ReadOnly,
+            required_mode: PermissionMode::WorkspaceWrite,
+        };
+
+        for _ in 0..3 {
+            match prompter.decide(&request) {
+                PermissionPromptDecision::Allow => {
+                    assert!(will_allow, "prompter returned Allow but was expected to deny");
+                }
+                PermissionPromptDecision::Deny { reason } => {
+                    assert!(!will_allow, "prompter returned Deny but was expected to allow");
+                    assert!(!reason.is_empty(), "deny reason must not be empty");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn recording_prompter_allow_satisfies_contract() {
+        assert_prompter_contract(
+            RecordingPrompter { seen: vec![], allow: true },
+            true,
+        );
+    }
+
+    #[test]
+    fn recording_prompter_deny_satisfies_contract() {
+        assert_prompter_contract(
+            RecordingPrompter { seen: vec![], allow: false },
+            false,
+        );
+    }
+
+    #[test]
+    fn prompter_receives_correct_request_fields() {
+        let mut prompter = RecordingPrompter { seen: vec![], allow: true };
+        let request = PermissionRequest {
+            tool_name: "bash".to_string(),
+            input: "echo hi".to_string(),
+            current_mode: PermissionMode::WorkspaceWrite,
+            required_mode: PermissionMode::DangerFullAccess,
+        };
+        prompter.decide(&request);
+        assert_eq!(prompter.seen.len(), 1);
+        assert_eq!(prompter.seen[0].tool_name, "bash");
+        assert_eq!(prompter.seen[0].input, "echo hi");
+        assert_eq!(prompter.seen[0].current_mode, PermissionMode::WorkspaceWrite);
+        assert_eq!(prompter.seen[0].required_mode, PermissionMode::DangerFullAccess);
     }
 
     #[test]

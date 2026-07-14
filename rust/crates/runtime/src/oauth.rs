@@ -592,6 +592,60 @@ mod tests {
         assert_eq!(params.state.as_deref(), Some("xyz"));
         assert!(parse_oauth_callback_request_target("/wrong?code=abc").is_err());
     }
+
+    mod property {
+        use proptest::prelude::*;
+
+        use super::super::{
+            OAuthAuthorizationRequest, PkceChallengeMethod, percent_decode, percent_encode,
+        };
+
+        proptest! {
+            #[test]
+            fn encode_decode_round_trips(s in ".*") {
+                let encoded = percent_encode(&s);
+                let decoded = percent_decode(&encoded)
+                    .expect("encode→decode must succeed for any input string");
+                prop_assert_eq!(decoded, s);
+            }
+
+            #[test]
+            fn encode_never_panics(s in ".*") {
+                let _ = percent_encode(&s);
+            }
+
+            #[test]
+            fn decode_never_panics(s in ".*") {
+                let _ = percent_decode(&s);
+            }
+
+            #[test]
+            fn build_url_is_always_parseable(
+                authorize_url in "https://[a-z]{3,10}\\.example\\.com/auth",
+                client_id     in "[a-zA-Z0-9]{4,16}",
+                redirect_uri  in "http://127\\.0\\.0\\.1:[0-9]{4}/callback",
+                scope         in "[a-zA-Z0-9:_]{1,20}",
+                state         in "[a-zA-Z0-9]{8,16}",
+                code_challenge in "[a-zA-Z0-9_-]{43,128}",
+            ) {
+                let req = OAuthAuthorizationRequest {
+                    authorize_url,
+                    client_id,
+                    redirect_uri,
+                    scopes: vec![scope],
+                    state,
+                    code_challenge,
+                    code_challenge_method: PkceChallengeMethod::S256,
+                    extra_params: Default::default(),
+                };
+                let url = req.build_url();
+                prop_assert!(
+                    url::Url::parse(&url).is_ok(),
+                    "build_url produced unparseable URL: {url}"
+                );
+            }
+        }
+    }
 }
 
 #[cfg(feature = "fuzz")]

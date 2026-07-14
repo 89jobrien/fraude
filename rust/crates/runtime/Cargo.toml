@@ -22,5 +22,9 @@ walkdir = "2"
 [features]
 fuzz = []
 
+[dev-dependencies]
+proptest = "1"
+url = "2"
+
 [lints]
 workspace = true
