@@ -363,7 +363,7 @@ mod tests {
         assert!(root.join(".fraude.json").is_file());
         assert!(root.join("FRAUDE.md").is_file());
         assert_eq!(
-            fs::read_to_string(root.join(".fraude.json")).expect("read claw json"),
+            fs::read_to_string(root.join(".fraude.json")).expect("read fraude json"),
             concat!(
                 "{\n",
                 "  \"permissions\": {\n",
@@ -386,7 +386,7 @@ mod tests {
     fn initialize_repo_is_idempotent_and_preserves_existing_files() {
         let root = temp_dir();
         fs::create_dir_all(&root).expect("create root");
-        fs::write(root.join("FRAUDE.md"), "custom guidance\n").expect("write existing claw md");
+        fs::write(root.join("FRAUDE.md"), "custom guidance\n").expect("write existing fraude md");
         fs::write(root.join(".gitignore"), ".fraude/settings.local.json\n")
             .expect("write gitignore");
 
@@ -403,7 +403,7 @@ mod tests {
         assert!(second_rendered.contains(".gitignore       skipped (already exists)"));
         assert!(second_rendered.contains("FRAUDE.md        skipped (already exists)"));
         assert_eq!(
-            fs::read_to_string(root.join("FRAUDE.md")).expect("read existing claw md"),
+            fs::read_to_string(root.join("FRAUDE.md")).expect("read existing fraude md"),
             "custom guidance\n"
         );
         let gitignore = fs::read_to_string(root.join(".gitignore")).expect("read gitignore");

@@ -1,0 +1,8 @@
+project: fraude
+id: fraude
+updated: 2026-07-14
+items: []
+log:
+  - date: "20260713.225900"
+    summary: done=10 running=0 pending=0 blocked=0
+    commits: []

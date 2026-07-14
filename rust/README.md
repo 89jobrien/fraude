@@ -69,8 +69,8 @@ cargo run --bin fraude -- --model sonnet "review the latest changes"
 From the release build:
 
 ```bash
-./target/release/claw
-./target/release/claw prompt "explain crates/runtime"
+./target/release/fraude
+./target/release/fraude prompt "explain crates/runtime"
 ```
 
 ## Supported capabilities
@@ -79,10 +79,10 @@ From the release build:
 - Saved-session inspection and resume flows
 - Built-in workspace tools for shell, file read/write/edit, search, web fetch/search, todos, and notebook updates
 - Slash commands for status, compaction, config inspection, diff, export, session management, and version reporting
-- Local agent and skill discovery with `claw agents` and `claw skills`
+- Local agent and skill discovery with `fraude agents` and `fraude skills`
 - Plugin discovery and management through the CLI and slash-command surfaces
 - OAuth login/logout plus model/provider selection from the command line
-- Workspace-aware instruction/config loading (`CLAW.md`, config files, permissions, plugin settings)
+- Workspace-aware instruction/config loading (`FRAUDE.md`, config files, permissions, plugin settings)
 
 ## Current limitations
 
@@ -96,7 +96,7 @@ From the release build:
 
 The Rust workspace is the active product implementation. It currently includes these crates:
 
-- `claw-cli` — user-facing binary
+- `fraude-cli` — user-facing binary
 - `api` — provider clients and streaming
 - `runtime` — sessions, config, permissions, prompts, and runtime loop
 - `tools` — built-in tool implementations

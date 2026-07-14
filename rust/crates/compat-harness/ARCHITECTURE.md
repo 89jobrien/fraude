@@ -20,7 +20,7 @@ are added here rather than in the consuming crates.
 
 ```
 UpstreamPaths::detect()
-  └─ resolves claw-code installation root from PATH / well-known locations
+  └─ resolves fraude installation root from PATH / well-known locations
         │
         ▼
 extract_manifest(&paths)

@@ -6,7 +6,7 @@
 ## Gap filled
 
 Fraude's slash-command layer is a hand-rolled `match` on command name strings in
-`claw-cli/src/main.rs`. Every new command requires manual argument parsing, help-text
+`fraude-cli/src/main.rs`. Every new command requires manual argument parsing, help-text
 registration, and category assignment. `slash` is an orchestration language and parser
 designed exactly for this pattern — it provides composable pipelines, structured argument
 validation, and declarative command definitions.

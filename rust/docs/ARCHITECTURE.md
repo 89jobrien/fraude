@@ -138,9 +138,9 @@ executor from `tools`, and the runtime from `runtime`, then drives the REPL loop
 Settings are merged in this priority order (highest wins):
 
 1. CLI flags (e.g. `--model`, `--permission`)
-2. `.claw/settings.local.json` (machine-local, gitignored)
-3. `.claw/settings.json` (project-level)
-4. `~/.claw/settings.json` (user-level)
+2. `.fraude/settings.local.json` (machine-local, gitignored)
+3. `.fraude/settings.json` (project-level)
+4. `~/.fraude/settings.json` (user-level)
 5. Compiled-in defaults
 
 `CLAW.md` files are discovered by walking from the current directory to the repo root and

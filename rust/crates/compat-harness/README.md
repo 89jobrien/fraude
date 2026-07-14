@@ -1,12 +1,12 @@
 # compat-harness
 
-Extracts tool and command manifests from an upstream `claw-code` repository installation
+Extracts tool and command manifests from an upstream `fraude` repository installation
 and makes them available to Fraude's runtime. Acts as the bridge between the upstream
 binary's bundled assets and Fraude's plugin and command registries.
 
 ## Purpose
 
-`claw-code` ships its tool definitions, slash-command specs, and bootstrap configuration
+`fraude` ships its tool definitions, slash-command specs, and bootstrap configuration
 as embedded assets. `compat-harness` resolves the on-disk paths of these assets, reads
 and deserialises them, and returns a unified `ExtractedManifest` that Fraude can ingest
 at startup.
@@ -26,5 +26,5 @@ let manifest = extract_manifest(&paths)?;
 
 ## When to use
 
-Only needed when running Fraude alongside an existing `claw-code` installation.
+Only needed when running Fraude alongside an existing `fraude` installation.
 In standalone mode this crate is not required.

@@ -1,6 +1,6 @@
 # PARITY GAP ANALYSIS
 
-Scope: read-only comparison between the original TypeScript source at `/home/bellman/Workspace/claw-code/src/` and the Rust port under `rust/crates/` (the fraude project).
+Scope: read-only comparison between the original TypeScript source at `/home/bellman/Workspace/fraude/src/` and the Rust port under `rust/crates/` (the fraude project).
 
 Method: compared feature surfaces, registries, entrypoints, and runtime plumbing only. No TypeScript source was copied.
 

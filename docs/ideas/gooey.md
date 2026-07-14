@@ -7,7 +7,7 @@
 
 Fraude's ratatui dashboard (`fraude dashboard` / `fraude tui`) renders three panes
 correctly but is driven by a scripted demo event sequence rather than the real agent loop.
-The comment in `claw-cli/src/main.rs` notes the UI is driven by an `AgentEvent` stream
+The comment in `fraude-cli/src/main.rs` notes the UI is driven by an `AgentEvent` stream
 and "can be wired to the real agent loop without touching the rendering code." `gooey` is
 an experimental TUI/UI framework that provides the reactive data pipeline layer the
 dashboard needs.

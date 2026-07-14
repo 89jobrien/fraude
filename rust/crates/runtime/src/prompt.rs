@@ -538,9 +538,9 @@ mod tests {
             .expect("write apps instructions");
         fs::write(
             root.join("apps").join(".fraude").join("instructions.md"),
-            "apps dot claw instructions",
+            "apps dot fraude instructions",
         )
-        .expect("write apps dot claw instructions");
+        .expect("write apps dot fraude instructions");
         fs::write(nested.join(".fraude").join("FRAUDE.md"), "nested rules")
             .expect("write nested rules");
         fs::write(
@@ -562,7 +562,7 @@ mod tests {
                 "root instructions",
                 "local instructions",
                 "apps instructions",
-                "apps dot claw instructions",
+                "apps dot fraude instructions",
                 "nested rules",
                 "nested instructions"
             ]

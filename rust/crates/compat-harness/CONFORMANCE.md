@@ -3,7 +3,7 @@
 ## External Standards
 
 No external protocol or specification governs this crate. It is an internal compatibility
-shim whose contract is defined entirely by the layout of the upstream `claw-code`
+shim whose contract is defined entirely by the layout of the upstream `fraude`
 installation.
 
 ## Informal Contracts
@@ -16,6 +16,6 @@ installation.
 
 ## Known Deviations
 
-- The upstream asset format is not versioned; silent breakage is possible when `claw-code`
+- The upstream asset format is not versioned; silent breakage is possible when `fraude`
   updates its manifest schema.
 - `UpstreamPaths` does not verify the upstream binary's version before extracting assets.
