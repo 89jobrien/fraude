@@ -296,14 +296,19 @@ impl OpenAiSseParser {
     }
 }
 
+#[derive(Debug, Default, PartialEq, Eq)]
+enum TextBlockPhase {
+    #[default]
+    NotStarted,
+    Open,
+    Closed,
+}
+
 #[derive(Debug)]
-// TODO: refactor StreamState to replace bool fields with a single state enum
-#[allow(clippy::struct_excessive_bools)]
 struct StreamState {
     model: String,
     message_started: bool,
-    text_started: bool,
-    text_finished: bool,
+    text_block: TextBlockPhase,
     finished: bool,
     stop_reason: Option<String>,
     usage: Option<Usage>,
@@ -315,8 +320,7 @@ impl StreamState {
         Self {
             model,
             message_started: false,
-            text_started: false,
-            text_finished: false,
+            text_block: TextBlockPhase::NotStarted,
             finished: false,
             stop_reason: None,
             usage: None,
@@ -359,8 +363,8 @@ impl StreamState {
 
         for choice in chunk.choices {
             if let Some(content) = choice.delta.content.filter(|value| !value.is_empty()) {
-                if !self.text_started {
-                    self.text_started = true;
+                if self.text_block == TextBlockPhase::NotStarted {
+                    self.text_block = TextBlockPhase::Open;
                     events.push(StreamEvent::ContentBlockStart(ContentBlockStartEvent {
                         index: 0,
                         content_block: OutputContentBlock::Text {
@@ -379,7 +383,7 @@ impl StreamState {
                 state.apply(tool_call);
                 let block_index = state.block_index();
                 if !state.started {
-                    if let Some(start_event) = state.start_event()? {
+                    if let Some(start_event) = state.start_event() {
                         state.started = true;
                         events.push(StreamEvent::ContentBlockStart(start_event));
                     } else {
@@ -422,8 +426,8 @@ impl StreamState {
         self.finished = true;
 
         let mut events = Vec::new();
-        if self.text_started && !self.text_finished {
-            self.text_finished = true;
+        if self.text_block == TextBlockPhase::Open {
+            self.text_block = TextBlockPhase::Closed;
             events.push(StreamEvent::ContentBlockStop(ContentBlockStopEvent {
                 index: 0,
             }));
@@ -431,7 +435,7 @@ impl StreamState {
 
         for state in self.tool_calls.values_mut() {
             if !state.started
-                && let Some(start_event) = state.start_event()?
+                && let Some(start_event) = state.start_event()
             {
                 state.started = true;
                 events.push(StreamEvent::ContentBlockStart(start_event));
@@ -499,24 +503,20 @@ impl ToolCallState {
         self.openai_index + 1
     }
 
-    // TODO: change return type to Option<ContentBlockStartEvent> — the Err variant is unreachable
-    #[allow(clippy::unnecessary_wraps)]
-    fn start_event(&self) -> Result<Option<ContentBlockStartEvent>, ApiError> {
-        let Some(name) = self.name.clone() else {
-            return Ok(None);
-        };
+    fn start_event(&self) -> Option<ContentBlockStartEvent> {
+        let name = self.name.clone()?;
         let id = self
             .id
             .clone()
             .unwrap_or_else(|| format!("tool_call_{}", self.openai_index));
-        Ok(Some(ContentBlockStartEvent {
+        Some(ContentBlockStartEvent {
             index: self.block_index(),
             content_block: OutputContentBlock::ToolUse {
                 id,
                 name,
                 input: json!({}),
             },
-        }))
+        })
     }
 
     fn delta_event(&mut self) -> Option<ContentBlockDeltaEvent> {
