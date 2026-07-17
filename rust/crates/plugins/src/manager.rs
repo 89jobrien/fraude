@@ -8,15 +8,16 @@ use serde_json::{Map, Value};
 
 use crate::error::PluginError;
 use crate::manifest::{
-    REGISTRY_FILE_NAME, SETTINGS_FILE_NAME,
-    PluginManifest, load_plugin_from_directory, plugin_manifest_path,
+    PluginManifest, REGISTRY_FILE_NAME, SETTINGS_FILE_NAME, load_plugin_from_directory,
+    plugin_manifest_path,
 };
-use crate::registry::{InstalledPluginRecord, InstalledPluginRegistry, PluginRegistry, PluginSummary, RegisteredPlugin};
+use crate::registry::{
+    InstalledPluginRecord, InstalledPluginRegistry, PluginRegistry, PluginSummary, RegisteredPlugin,
+};
 use crate::types::{
-    BUNDLED_MARKETPLACE, EXTERNAL_MARKETPLACE, BuiltinPlugin, BundledPlugin, ExternalPlugin,
-    Plugin, PluginDefinition, PluginInstallSource, PluginKind, PluginMetadata,
-    builtin_plugins, describe_install_source, plugin_id, resolve_hooks, resolve_lifecycle,
-    resolve_tools,
+    BUNDLED_MARKETPLACE, BuiltinPlugin, BundledPlugin, EXTERNAL_MARKETPLACE, ExternalPlugin,
+    Plugin, PluginDefinition, PluginInstallSource, PluginKind, PluginMetadata, builtin_plugins,
+    describe_install_source, plugin_id, resolve_hooks, resolve_lifecycle, resolve_tools,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

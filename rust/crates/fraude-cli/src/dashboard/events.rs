@@ -100,7 +100,11 @@ mod tests {
         .map(|s| s.glyph())
         .collect();
         let unique: std::collections::HashSet<_> = glyphs.iter().copied().collect();
-        assert_eq!(unique.len(), glyphs.len(), "each FileStatus must have a unique glyph");
+        assert_eq!(
+            unique.len(),
+            glyphs.len(),
+            "each FileStatus must have a unique glyph"
+        );
     }
 
     #[test]
@@ -111,7 +115,10 @@ mod tests {
             FileStatus::Read,
             FileStatus::Modified,
         ] {
-            assert!(!status.label().is_empty(), "{status:?} label must not be empty");
+            assert!(
+                !status.label().is_empty(),
+                "{status:?} label must not be empty"
+            );
         }
     }
 
@@ -138,7 +145,10 @@ mod tests {
 
     #[test]
     fn agent_event_log_holds_stage_and_detail() {
-        let entry = LogEntry { stage: "Analyzing AST".to_string(), detail: "ok".to_string() };
+        let entry = LogEntry {
+            stage: "Analyzing AST".to_string(),
+            detail: "ok".to_string(),
+        };
         let event = AgentEvent::Log(entry.clone());
         assert!(matches!(event, AgentEvent::Log(e) if e.stage == "Analyzing AST"));
     }

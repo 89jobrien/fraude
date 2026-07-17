@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::PluginError;
 use crate::manifest::PluginHooks;
-use crate::types::{Plugin, PluginDefinition, PluginInstallSource, PluginKind, PluginMetadata, PluginTool};
+use crate::types::{
+    Plugin, PluginDefinition, PluginInstallSource, PluginKind, PluginMetadata, PluginTool,
+};
 
 fn default_plugin_kind() -> PluginKind {
     PluginKind::External

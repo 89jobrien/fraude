@@ -1872,7 +1872,11 @@ mod tests {
         }
 
         run_command(&root, "git", &["config", "user.name", "Fraude Tests"]);
-        run_command(&root, "git", &["config", "user.email", "fraude@example.com"]);
+        run_command(
+            &root,
+            "git",
+            &["config", "user.email", "fraude@example.com"],
+        );
         fs::write(root.join("README.md"), "seed\n").expect("seed file");
         run_command(&root, "git", &["add", "README.md"]);
         run_command(&root, "git", &["commit", "-m", "chore: seed repo"]);

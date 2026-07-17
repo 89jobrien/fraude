@@ -251,7 +251,7 @@ impl MessageStream {
             }
 
             if self.done {
-                self.pending.extend(self.state.finish()?);
+                self.pending.extend(self.state.finish());
                 if let Some(event) = self.pending.pop_front() {
                     return Ok(Some(event));
                 }
@@ -261,7 +261,7 @@ impl MessageStream {
             match self.response.chunk().await? {
                 Some(chunk) => {
                     for parsed in self.parser.push(&chunk)? {
-                        self.pending.extend(self.state.ingest_chunk(parsed)?);
+                        self.pending.extend(self.state.ingest_chunk(parsed));
                     }
                 }
                 None => {
@@ -328,7 +328,7 @@ impl StreamState {
         }
     }
 
-    fn ingest_chunk(&mut self, chunk: ChatCompletionChunk) -> Result<Vec<StreamEvent>, ApiError> {
+    fn ingest_chunk(&mut self, chunk: ChatCompletionChunk) -> Vec<StreamEvent> {
         let mut events = Vec::new();
         if !self.message_started {
             self.message_started = true;
@@ -416,12 +416,12 @@ impl StreamState {
             }
         }
 
-        Ok(events)
+        events
     }
 
-    fn finish(&mut self) -> Result<Vec<StreamEvent>, ApiError> {
+    fn finish(&mut self) -> Vec<StreamEvent> {
         if self.finished {
-            return Ok(Vec::new());
+            return Vec::new();
         }
         self.finished = true;
 
@@ -470,7 +470,7 @@ impl StreamState {
             }));
             events.push(StreamEvent::MessageStop(MessageStopEvent {}));
         }
-        Ok(events)
+        events
     }
 }
 

@@ -1345,9 +1345,9 @@ impl LiveCli {
                 Self::print_skills(args.as_deref())?;
                 false
             }
-            SlashCommand::Branch { .. } | SlashCommand::Worktree { .. } | SlashCommand::CommitPushPr { .. } => {
-                self.handle_unavailable_command(&command)
-            }
+            SlashCommand::Branch { .. }
+            | SlashCommand::Worktree { .. }
+            | SlashCommand::CommitPushPr { .. } => Self::handle_unavailable_command(&command),
             SlashCommand::Unknown(name) => {
                 eprintln!("{}", render_unknown_repl_command(&name));
                 false
@@ -1355,7 +1355,7 @@ impl LiveCli {
         })
     }
 
-    fn handle_unavailable_command(&self, command: &SlashCommand) -> bool {
+    fn handle_unavailable_command(command: &SlashCommand) -> bool {
         let (name, description) = match command {
             SlashCommand::Branch { .. } => ("branch", "git branch commands"),
             SlashCommand::Worktree { .. } => ("worktree", "git worktree commands"),
@@ -3992,47 +3992,125 @@ fn convert_messages(messages: &[ConversationMessage]) -> Vec<InputMessage> {
 
 fn write_quick_start(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Quick start")?;
-    writeln!(out, "  fraude                                  Start the interactive REPL")?;
-    writeln!(out, "  fraude \"summarize this repo\"            Run one prompt and exit")?;
-    writeln!(out, "  fraude prompt \"explain src/main.rs\"     Explicit one-shot prompt")?;
-    writeln!(out, "  fraude --resume SESSION.json /status    Inspect a saved session")?;
+    writeln!(
+        out,
+        "  fraude                                  Start the interactive REPL"
+    )?;
+    writeln!(
+        out,
+        "  fraude \"summarize this repo\"            Run one prompt and exit"
+    )?;
+    writeln!(
+        out,
+        "  fraude prompt \"explain src/main.rs\"     Explicit one-shot prompt"
+    )?;
+    writeln!(
+        out,
+        "  fraude --resume SESSION.json /status    Inspect a saved session"
+    )?;
     writeln!(out)
 }
 
 fn write_interactive_essentials(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Interactive essentials")?;
-    writeln!(out, "  /help                                 Browse the full slash command map")?;
-    writeln!(out, "  /status                               Inspect session + workspace state")?;
-    writeln!(out, "  /model <name>                         Switch models mid-session")?;
-    writeln!(out, "  /permissions <mode>                   Adjust tool access")?;
-    writeln!(out, "  Tab                                   Complete slash commands")?;
-    writeln!(out, "  /vim                                  Toggle modal editing")?;
-    writeln!(out, "  Shift+Enter / Ctrl+J                  Insert a newline")?;
+    writeln!(
+        out,
+        "  /help                                 Browse the full slash command map"
+    )?;
+    writeln!(
+        out,
+        "  /status                               Inspect session + workspace state"
+    )?;
+    writeln!(
+        out,
+        "  /model <name>                         Switch models mid-session"
+    )?;
+    writeln!(
+        out,
+        "  /permissions <mode>                   Adjust tool access"
+    )?;
+    writeln!(
+        out,
+        "  Tab                                   Complete slash commands"
+    )?;
+    writeln!(
+        out,
+        "  /vim                                  Toggle modal editing"
+    )?;
+    writeln!(
+        out,
+        "  Shift+Enter / Ctrl+J                  Insert a newline"
+    )?;
     writeln!(out)
 }
 
 fn write_commands_section(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Commands")?;
-    writeln!(out, "  fraude dashboard                        Launch the live split-pane TUI dashboard")?;
-    writeln!(out, "  fraude dump-manifests                   Read upstream TS sources and print extracted counts")?;
-    writeln!(out, "  fraude bootstrap-plan                   Print the bootstrap phase skeleton")?;
-    writeln!(out, "  fraude agents                           List configured agents")?;
-    writeln!(out, "  fraude skills                           List installed skills")?;
-    writeln!(out, "  fraude system-prompt [--cwd PATH] [--date YYYY-MM-DD]")?;
-    writeln!(out, "  fraude login                            Start the OAuth login flow")?;
-    writeln!(out, "  fraude logout                           Clear saved OAuth credentials")?;
-    writeln!(out, "  fraude init                             Scaffold FRAUDE.md + local files")?;
+    writeln!(
+        out,
+        "  fraude dashboard                        Launch the live split-pane TUI dashboard"
+    )?;
+    writeln!(
+        out,
+        "  fraude dump-manifests                   Read upstream TS sources and print extracted counts"
+    )?;
+    writeln!(
+        out,
+        "  fraude bootstrap-plan                   Print the bootstrap phase skeleton"
+    )?;
+    writeln!(
+        out,
+        "  fraude agents                           List configured agents"
+    )?;
+    writeln!(
+        out,
+        "  fraude skills                           List installed skills"
+    )?;
+    writeln!(
+        out,
+        "  fraude system-prompt [--cwd PATH] [--date YYYY-MM-DD]"
+    )?;
+    writeln!(
+        out,
+        "  fraude login                            Start the OAuth login flow"
+    )?;
+    writeln!(
+        out,
+        "  fraude logout                           Clear saved OAuth credentials"
+    )?;
+    writeln!(
+        out,
+        "  fraude init                             Scaffold FRAUDE.md + local files"
+    )?;
     writeln!(out)
 }
 
 fn write_flags_section(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Flags")?;
-    writeln!(out, "  --model MODEL                         Override the active model")?;
-    writeln!(out, "  --output-format FORMAT                Non-interactive output: text or json")?;
-    writeln!(out, "  --permission-mode MODE                Set read-only, workspace-write, or danger-full-access")?;
-    writeln!(out, "  --dangerously-skip-permissions        Skip all permission checks")?;
-    writeln!(out, "  --allowedTools TOOLS                  Restrict enabled tools (repeatable; comma-separated aliases supported)")?;
-    writeln!(out, "  --version, -V                         Print version and build information")?;
+    writeln!(
+        out,
+        "  --model MODEL                         Override the active model"
+    )?;
+    writeln!(
+        out,
+        "  --output-format FORMAT                Non-interactive output: text or json"
+    )?;
+    writeln!(
+        out,
+        "  --permission-mode MODE                Set read-only, workspace-write, or danger-full-access"
+    )?;
+    writeln!(
+        out,
+        "  --dangerously-skip-permissions        Skip all permission checks"
+    )?;
+    writeln!(
+        out,
+        "  --allowedTools TOOLS                  Restrict enabled tools (repeatable; comma-separated aliases supported)"
+    )?;
+    writeln!(
+        out,
+        "  --version, -V                         Print version and build information"
+    )?;
     writeln!(out)
 }
 
@@ -4048,9 +4126,18 @@ fn write_examples_section(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Resume-safe commands: {resume_commands}")?;
     writeln!(out, "Examples")?;
     writeln!(out, "  fraude --model opus \"summarize this repo\"")?;
-    writeln!(out, "  fraude --output-format json prompt \"explain src/main.rs\"")?;
-    writeln!(out, "  fraude --allowedTools read,glob \"summarize Cargo.toml\"")?;
-    writeln!(out, "  fraude --resume session.json /status /diff /export notes.txt")?;
+    writeln!(
+        out,
+        "  fraude --output-format json prompt \"explain src/main.rs\""
+    )?;
+    writeln!(
+        out,
+        "  fraude --allowedTools read,glob \"summarize Cargo.toml\""
+    )?;
+    writeln!(
+        out,
+        "  fraude --resume session.json /status /diff /export notes.txt"
+    )?;
     writeln!(out, "  fraude agents")?;
     writeln!(out, "  fraude /skills")?;
     writeln!(out, "  fraude login")?;
@@ -4059,7 +4146,10 @@ fn write_examples_section(out: &mut impl Write) -> io::Result<()> {
 
 fn print_help_to(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "Fraude CLI v{VERSION}")?;
-    writeln!(out, "  Interactive coding assistant for the current workspace.")?;
+    writeln!(
+        out,
+        "  Interactive coding assistant for the current workspace."
+    )?;
     writeln!(out)?;
     write_quick_start(out)?;
     write_interactive_essentials(out)?;

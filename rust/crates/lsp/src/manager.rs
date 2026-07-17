@@ -265,17 +265,16 @@ mod tests {
 
     #[test]
     fn extension_normalisation_strips_leading_dot() {
-        let manager =
-            LspManager::new(vec![make_config("rust-analyzer", &[".rs", "toml"])])
-                .expect("mixed dot/no-dot should succeed");
+        let manager = LspManager::new(vec![make_config("rust-analyzer", &[".rs", "toml"])])
+            .expect("mixed dot/no-dot should succeed");
         assert!(manager.supports_path(Path::new("Cargo.toml")));
         assert!(manager.supports_path(Path::new("main.rs")));
     }
 
     #[test]
     fn supports_path_false_for_no_extension() {
-        let manager = LspManager::new(vec![make_config("rust-analyzer", &[".rs"])])
-            .expect("valid config");
+        let manager =
+            LspManager::new(vec![make_config("rust-analyzer", &[".rs"])]).expect("valid config");
         assert!(!manager.supports_path(Path::new("Makefile")));
     }
 }

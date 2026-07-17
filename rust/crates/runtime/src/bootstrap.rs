@@ -77,7 +77,10 @@ mod tests {
             BootstrapPhase::MainRuntime,
             BootstrapPhase::MainRuntime,
         ]);
-        assert_eq!(plan.phases(), &[BootstrapPhase::CliEntry, BootstrapPhase::MainRuntime]);
+        assert_eq!(
+            plan.phases(),
+            &[BootstrapPhase::CliEntry, BootstrapPhase::MainRuntime]
+        );
     }
 
     #[test]

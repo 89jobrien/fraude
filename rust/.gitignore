@@ -6,3 +6,6 @@ target/
 .claw/sessions/
 .claw*
 .sandbox*
+# Fraude local artifacts
+.fraude/settings.local.json
+.fraude/sessions/

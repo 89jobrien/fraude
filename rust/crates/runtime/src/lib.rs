@@ -24,7 +24,7 @@ pub use compact::{
     format_compact_summary, get_compact_continuation_message, should_compact,
 };
 pub use config::{
-    FRAUDE_SETTINGS_SCHEMA_NAME, ConfigEntry, ConfigError, ConfigLoader, ConfigSource,
+    ConfigEntry, ConfigError, ConfigLoader, ConfigSource, FRAUDE_SETTINGS_SCHEMA_NAME,
     McpConfigCollection, McpManagedProxyServerConfig, McpOAuthConfig, McpRemoteServerConfig,
     McpSdkServerConfig, McpServerConfig, McpStdioServerConfig, McpTransport,
     McpWebSocketServerConfig, OAuthConfig, ResolvedPermissionMode, RuntimeConfig,
@@ -60,6 +60,8 @@ pub use mcp_stdio::{
     McpServerManager, McpServerManagerError, McpStdioProcess, McpTool, McpToolCallContent,
     McpToolCallParams, McpToolCallResult, UnsupportedMcpServer, spawn_mcp_stdio_process,
 };
+#[cfg(feature = "fuzz")]
+pub use oauth::fuzz_helpers as oauth_fuzz;
 pub use oauth::{
     OAuthAuthorizationRequest, OAuthCallbackParams, OAuthRefreshRequest, OAuthTokenExchangeRequest,
     OAuthTokenSet, PkceChallengeMethod, PkceCodePair, clear_oauth_credentials, code_challenge_s256,
@@ -67,8 +69,6 @@ pub use oauth::{
     loopback_redirect_uri, parse_oauth_callback_query, parse_oauth_callback_request_target,
     save_oauth_credentials,
 };
-#[cfg(feature = "fuzz")]
-pub use oauth::fuzz_helpers as oauth_fuzz;
 pub use permissions::{
     PermissionMode, PermissionOutcome, PermissionPolicy, PermissionPromptDecision,
     PermissionPrompter, PermissionRequest,

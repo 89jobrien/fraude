@@ -499,7 +499,9 @@ mod tests {
     #[tokio::test]
     async fn valid_message_round_trips() {
         let body = r#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
-        let result = call(&encode(body)).await.expect("valid message should parse");
+        let result = call(&encode(body))
+            .await
+            .expect("valid message should parse");
         assert_eq!(
             result,
             Some(json!({"jsonrpc": "2.0", "id": 1, "method": "initialize"}))
@@ -509,7 +511,9 @@ mod tests {
     #[tokio::test]
     async fn missing_content_length_header() {
         let input = b"X-Custom: value\r\n\r\n{}";
-        let err = call(input).await.expect_err("should fail without Content-Length");
+        let err = call(input)
+            .await
+            .expect_err("should fail without Content-Length");
         assert!(
             matches!(err, LspError::MissingContentLength),
             "expected MissingContentLength, got {err}"
@@ -519,7 +523,9 @@ mod tests {
     #[tokio::test]
     async fn malformed_content_length_value() {
         let input = b"Content-Length: not-a-number\r\n\r\n{}";
-        let err = call(input).await.expect_err("should fail on non-integer Content-Length");
+        let err = call(input)
+            .await
+            .expect_err("should fail on non-integer Content-Length");
         assert!(
             matches!(err, LspError::InvalidContentLength(_)),
             "expected InvalidContentLength, got {err}"
@@ -531,7 +537,10 @@ mod tests {
         // Advertise 100 bytes but only supply 5.
         let input = b"Content-Length: 100\r\n\r\nhello";
         let err = call(input).await.expect_err("truncated body should fail");
-        assert!(matches!(err, LspError::Io(_)), "expected Io error, got {err}");
+        assert!(
+            matches!(err, LspError::Io(_)),
+            "expected Io error, got {err}"
+        );
     }
 
     #[tokio::test]
@@ -550,7 +559,10 @@ mod tests {
         let mut raw = format!("Content-Length: {}\r\n\r\n", body.len()).into_bytes();
         raw.extend_from_slice(body);
         let err = call(&raw).await.expect_err("non-JSON body should fail");
-        assert!(matches!(err, LspError::Json(_)), "expected Json error, got {err}");
+        assert!(
+            matches!(err, LspError::Json(_)),
+            "expected Json error, got {err}"
+        );
     }
 }
 

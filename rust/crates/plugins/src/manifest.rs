@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::error::{PluginError, PluginManifestValidationError};
-use crate::types::{
-    PluginPermission, PluginToolPermission, is_literal_command,
-};
+use crate::types::{PluginPermission, PluginToolPermission, is_literal_command};
 
 pub(crate) const SETTINGS_FILE_NAME: &str = "settings.json";
 pub(crate) const REGISTRY_FILE_NAME: &str = "installed.json";

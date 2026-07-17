@@ -360,7 +360,10 @@ mod tests {
         };
         let request = config.resolve_request(None, None, None, None, None);
         // Default filesystem mode is WorkspaceOnly — not AllowList, not a panic.
-        assert_eq!(request.filesystem_mode, FilesystemIsolationMode::WorkspaceOnly);
+        assert_eq!(
+            request.filesystem_mode,
+            FilesystemIsolationMode::WorkspaceOnly
+        );
         assert!(request.enabled);
     }
 

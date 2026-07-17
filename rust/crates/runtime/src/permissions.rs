@@ -177,10 +177,16 @@ mod tests {
         for _ in 0..3 {
             match prompter.decide(&request) {
                 PermissionPromptDecision::Allow => {
-                    assert!(will_allow, "prompter returned Allow but was expected to deny");
+                    assert!(
+                        will_allow,
+                        "prompter returned Allow but was expected to deny"
+                    );
                 }
                 PermissionPromptDecision::Deny { reason } => {
-                    assert!(!will_allow, "prompter returned Deny but was expected to allow");
+                    assert!(
+                        !will_allow,
+                        "prompter returned Deny but was expected to allow"
+                    );
                     assert!(!reason.is_empty(), "deny reason must not be empty");
                 }
             }
@@ -190,7 +196,10 @@ mod tests {
     #[test]
     fn recording_prompter_allow_satisfies_contract() {
         assert_prompter_contract(
-            RecordingPrompter { seen: vec![], allow: true },
+            RecordingPrompter {
+                seen: vec![],
+                allow: true,
+            },
             true,
         );
     }
@@ -198,14 +207,20 @@ mod tests {
     #[test]
     fn recording_prompter_deny_satisfies_contract() {
         assert_prompter_contract(
-            RecordingPrompter { seen: vec![], allow: false },
+            RecordingPrompter {
+                seen: vec![],
+                allow: false,
+            },
             false,
         );
     }
 
     #[test]
     fn prompter_receives_correct_request_fields() {
-        let mut prompter = RecordingPrompter { seen: vec![], allow: true };
+        let mut prompter = RecordingPrompter {
+            seen: vec![],
+            allow: true,
+        };
         let request = PermissionRequest {
             tool_name: "bash".to_string(),
             input: "echo hi".to_string(),
@@ -216,8 +231,14 @@ mod tests {
         assert_eq!(prompter.seen.len(), 1);
         assert_eq!(prompter.seen[0].tool_name, "bash");
         assert_eq!(prompter.seen[0].input, "echo hi");
-        assert_eq!(prompter.seen[0].current_mode, PermissionMode::WorkspaceWrite);
-        assert_eq!(prompter.seen[0].required_mode, PermissionMode::DangerFullAccess);
+        assert_eq!(
+            prompter.seen[0].current_mode,
+            PermissionMode::WorkspaceWrite
+        );
+        assert_eq!(
+            prompter.seen[0].required_mode,
+            PermissionMode::DangerFullAccess
+        );
     }
 
     #[test]

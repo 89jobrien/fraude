@@ -197,10 +197,8 @@ impl ConfigLoader {
     pub fn discover(&self) -> Vec<ConfigEntry> {
         let parent = self.config_home.parent();
 
-        let user_legacy_path = parent.map_or_else(
-            || PathBuf::from(".fraude.json"),
-            |p| p.join(".fraude.json"),
-        );
+        let user_legacy_path =
+            parent.map_or_else(|| PathBuf::from(".fraude.json"), |p| p.join(".fraude.json"));
 
         let project_legacy_path = self.cwd.join(".fraude.json");
 
@@ -430,10 +428,8 @@ pub fn default_config_home() -> PathBuf {
     if let Some(explicit) = std::env::var_os("FRAUDE_CONFIG_HOME") {
         return PathBuf::from(explicit);
     }
-    let home_base = std::env::var_os("HOME")
-        .map_or_else(|| PathBuf::from("."), PathBuf::from);
-    let fraude_dir = home_base.join(".fraude");
-    fraude_dir
+    let home_base = std::env::var_os("HOME").map_or_else(|| PathBuf::from("."), PathBuf::from);
+    home_base.join(".fraude")
 }
 
 impl RuntimeHookConfig {
@@ -950,7 +946,7 @@ fn push_unique(target: &mut Vec<String>, value: String) {
 #[cfg(test)]
 mod tests {
     use super::{
-        FRAUDE_SETTINGS_SCHEMA_NAME, ConfigLoader, ConfigSource, McpServerConfig, McpTransport,
+        ConfigLoader, ConfigSource, FRAUDE_SETTINGS_SCHEMA_NAME, McpServerConfig, McpTransport,
         ResolvedPermissionMode,
     };
     use crate::json::JsonValue;
