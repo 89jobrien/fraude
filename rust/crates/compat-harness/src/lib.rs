@@ -78,6 +78,17 @@ fn upstream_repo_candidates_with_override(
         candidates.push(explicit.to_path_buf());
     }
 
+    // ancestor walk: check parent directories for the upstream source
+    for ancestor in primary_repo_root.ancestors().skip(1).take(4) {
+        candidates.push(ancestor.join("fraude-code"));
+        candidates.push(ancestor.join("claw-code")); // compat: upstream may not be renamed yet
+    }
+    // conventional vendor/reference locations
+    candidates.push(primary_repo_root.join("reference-source").join("fraude-code"));
+    candidates.push(primary_repo_root.join("vendor").join("fraude-code"));
+    candidates.push(primary_repo_root.join("reference-source").join("claw-code"));
+    candidates.push(primary_repo_root.join("vendor").join("claw-code"));
+
     let mut deduped = Vec::new();
     for candidate in candidates {
         if !deduped.iter().any(|seen: &PathBuf| seen == &candidate) {
@@ -355,6 +366,27 @@ mod tests {
             .collect();
         assert!(names.contains(&"AgentTool"));
         assert!(names.contains(&"BashTool"));
+    }
+
+    #[test]
+    fn ancestor_walk_includes_sibling_directories() {
+        // Use a deeply-nested primary root so there are ancestors to walk.
+        let primary = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let candidates = upstream_repo_candidates_with_override(primary, None);
+
+        // At least one candidate should be an ancestor-based path (parent / "fraude-code"
+        // or parent / "claw-code").
+        let has_ancestor_path = candidates.iter().any(|c| {
+            c.file_name()
+                .map(|name| name == "fraude-code" || name == "claw-code")
+                .unwrap_or(false)
+                && c != &primary.join("fraude-code")
+                && c != &primary.join("claw-code")
+        });
+        assert!(
+            has_ancestor_path,
+            "expected at least one ancestor-based candidate; got {candidates:?}"
+        );
     }
 
     #[test]

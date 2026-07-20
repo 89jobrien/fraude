@@ -411,8 +411,9 @@ fn permission_mode_from_label(mode: &str) -> PermissionMode {
         "danger-full-access" => PermissionMode::DangerFullAccess,
         other => {
             eprintln!(
-                "warning: unsupported FRAUDE_PERMISSION_MODE value '{other}', \
-                 falling back to danger-full-access"
+                "warning: unsupported FRAUDE_PERMISSION_MODE value '{other}'; \
+                 valid values are: read-only, workspace-write, danger-full-access. \
+                 Falling back to danger-full-access."
             );
             PermissionMode::DangerFullAccess
         }
@@ -4178,6 +4179,8 @@ mod tests {
         print_help_to, push_output_block, render_config_report, render_memory_report,
         render_repl_help, render_unknown_repl_command, resolve_model_alias, response_to_events,
         resume_supported_slash_commands, slash_command_completion_candidates, status_context,
+        write_commands_section, write_examples_section, write_flags_section,
+        write_interactive_essentials, write_quick_start,
     };
     use api::{MessageResponse, OutputContentBlock, Usage};
     use plugins::{PluginTool, PluginToolDefinition, PluginToolPermission};
@@ -5178,5 +5181,64 @@ mod tests {
             AssistantEvent::TextDelta(text) if text == "Final answer"
         ));
         assert!(!String::from_utf8(out).expect("utf8").contains("step 1"));
+    }
+
+    #[test]
+    fn help_sections_produce_non_empty_output() {
+        let mut buf = Vec::new();
+
+        write_quick_start(&mut buf).expect("write_quick_start should succeed");
+        let text = String::from_utf8(buf.clone()).expect("utf8");
+        assert!(text.contains("fraude"), "quick_start should mention fraude");
+        assert!(
+            text.contains("Quick start"),
+            "quick_start should have section header"
+        );
+        buf.clear();
+
+        write_interactive_essentials(&mut buf)
+            .expect("write_interactive_essentials should succeed");
+        let text = String::from_utf8(buf.clone()).expect("utf8");
+        assert!(
+            !text.is_empty(),
+            "write_interactive_essentials should produce output"
+        );
+        assert!(
+            text.contains("/help"),
+            "interactive essentials should mention /help"
+        );
+        buf.clear();
+
+        write_commands_section(&mut buf).expect("write_commands_section should succeed");
+        let text = String::from_utf8(buf.clone()).expect("utf8");
+        assert!(
+            text.contains("Commands"),
+            "commands section should have header"
+        );
+        assert!(
+            text.contains("fraude dashboard"),
+            "commands section should list dashboard"
+        );
+        buf.clear();
+
+        write_flags_section(&mut buf).expect("write_flags_section should succeed");
+        let text = String::from_utf8(buf.clone()).expect("utf8");
+        assert!(text.contains("Flags"), "flags section should have header");
+        assert!(
+            text.contains("--model"),
+            "flags section should mention --model"
+        );
+        buf.clear();
+
+        write_examples_section(&mut buf).expect("write_examples_section should succeed");
+        let text = String::from_utf8(buf.clone()).expect("utf8");
+        assert!(
+            text.contains("Examples"),
+            "examples section should have header"
+        );
+        assert!(
+            text.contains("fraude --model"),
+            "examples should show model flag usage"
+        );
     }
 }

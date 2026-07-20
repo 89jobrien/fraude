@@ -564,6 +564,43 @@ mod tests {
             "expected Json error, got {err}"
         );
     }
+
+    #[tokio::test]
+    async fn read_message_content_length_zero() {
+        // Content-Length: 0 with an empty body must not panic.
+        // An empty JSON body is invalid JSON, so we expect a Json error.
+        let input = b"Content-Length: 0\r\n\r\n";
+        let result = call(input).await;
+        // Must not panic. The result is either Ok(Some(null-ish)) or a Json error;
+        // either is acceptable as long as it returns without panicking.
+        match result {
+            Ok(_) => {} // parser accepted empty body (e.g. treated as null)
+            Err(LspError::Json(_)) => {} // expected: empty slice is not valid JSON
+            Err(other) => panic!("unexpected error for zero-length body: {other}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn read_message_stops_at_first_complete_message() {
+        // Two valid messages concatenated — should parse the first one only.
+        let body1 = r#"{"method":"a"}"#;
+        let body2 = r#"{"method":"b"}"#;
+        let mut combined =
+            format!("Content-Length: {}\r\n\r\n{}", body1.len(), body1).into_bytes();
+        combined.extend_from_slice(
+            format!("Content-Length: {}\r\n\r\n{}", body2.len(), body2).as_bytes(),
+        );
+
+        let result = call(&combined)
+            .await
+            .expect("first message should parse successfully");
+        let value = result.expect("should return Some for a valid message");
+        assert_eq!(
+            value.get("method").and_then(|v| v.as_str()),
+            Some("a"),
+            "should return the first message, not the second"
+        );
+    }
 }
 
 #[cfg(feature = "fuzz")]

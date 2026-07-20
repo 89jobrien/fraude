@@ -304,12 +304,19 @@ enum TextBlockPhase {
     Closed,
 }
 
+#[derive(Debug, Default, PartialEq, Eq)]
+enum MessagePhase {
+    #[default]
+    NotStarted,
+    Open,
+    Closed,
+}
+
 #[derive(Debug)]
 struct StreamState {
     model: String,
-    message_started: bool,
+    message_phase: MessagePhase,
     text_block: TextBlockPhase,
-    finished: bool,
     stop_reason: Option<String>,
     usage: Option<Usage>,
     tool_calls: BTreeMap<u32, ToolCallState>,
@@ -319,9 +326,8 @@ impl StreamState {
     fn new(model: String) -> Self {
         Self {
             model,
-            message_started: false,
+            message_phase: MessagePhase::NotStarted,
             text_block: TextBlockPhase::NotStarted,
-            finished: false,
             stop_reason: None,
             usage: None,
             tool_calls: BTreeMap::new(),
@@ -330,8 +336,8 @@ impl StreamState {
 
     fn ingest_chunk(&mut self, chunk: ChatCompletionChunk) -> Vec<StreamEvent> {
         let mut events = Vec::new();
-        if !self.message_started {
-            self.message_started = true;
+        if self.message_phase == MessagePhase::NotStarted {
+            self.message_phase = MessagePhase::Open;
             events.push(StreamEvent::MessageStart(MessageStartEvent {
                 message: MessageResponse {
                     id: chunk.id.clone(),
@@ -420,10 +426,10 @@ impl StreamState {
     }
 
     fn finish(&mut self) -> Vec<StreamEvent> {
-        if self.finished {
+        if self.message_phase == MessagePhase::Closed {
             return Vec::new();
         }
-        self.finished = true;
+        self.message_phase = MessagePhase::Closed;
 
         let mut events = Vec::new();
         if self.text_block == TextBlockPhase::Open {
@@ -451,7 +457,7 @@ impl StreamState {
             }
         }
 
-        if self.message_started {
+        if self.message_phase != MessagePhase::NotStarted {
             events.push(StreamEvent::MessageDelta(MessageDeltaEvent {
                 delta: MessageDelta {
                     stop_reason: Some(
@@ -1048,6 +1054,43 @@ mod tests {
     fn normalizes_stop_reasons() {
         assert_eq!(normalize_finish_reason("stop"), "end_turn");
         assert_eq!(normalize_finish_reason("tool_calls"), "tool_use");
+    }
+
+    // Tests exercising the same paths as fuzz_helpers::push_chunk but without
+    // requiring the fuzz feature.
+    #[test]
+    fn sse_parser_empty_input_does_not_panic() {
+        let mut parser = super::OpenAiSseParser::new();
+        let result = parser.push(b"");
+        assert!(result.is_ok(), "empty input should not error");
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn sse_parser_done_sentinel_returns_no_chunks() {
+        let mut parser = super::OpenAiSseParser::new();
+        let result = parser.push(b"data: [DONE]\n\n");
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty(), "[DONE] should produce no chunks");
+    }
+
+    #[test]
+    fn sse_parser_valid_frame_parses_successfully() {
+        let frame = concat!(
+            r#"data: {"id":"chatcmpl-1","choices":[{"delta":{"content":"hi"},"finish_reason":null}]}"#,
+            "\n\n"
+        );
+        let mut parser = super::OpenAiSseParser::new();
+        let chunks = parser.push(frame.as_bytes()).expect("valid frame should parse");
+        assert_eq!(chunks.len(), 1);
+    }
+
+    #[test]
+    fn sse_parser_comment_lines_are_ignored() {
+        let frame = ": keep-alive\n\ndata: [DONE]\n\n";
+        let mut parser = super::OpenAiSseParser::new();
+        let result = parser.push(frame.as_bytes()).expect("comment frame should not error");
+        assert!(result.is_empty());
     }
 }
 

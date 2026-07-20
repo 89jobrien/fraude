@@ -119,13 +119,18 @@ impl PluginTool {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .env("FRAUDE_PLUGIN_ID", &self.plugin_id)
+            .env("CLAW_PLUGIN_ID", &self.plugin_id)
             .env("FRAUDE_PLUGIN_NAME", &self.plugin_name)
+            .env("CLAW_PLUGIN_NAME", &self.plugin_name)
             .env("FRAUDE_TOOL_NAME", &self.definition.name)
-            .env("FRAUDE_TOOL_INPUT", &input_json);
+            .env("CLAW_TOOL_NAME", &self.definition.name)
+            .env("FRAUDE_TOOL_INPUT", &input_json)
+            .env("CLAW_TOOL_INPUT", &input_json);
         if let Some(root) = &self.root {
             process
                 .current_dir(root)
-                .env("FRAUDE_PLUGIN_ROOT", root.display().to_string());
+                .env("FRAUDE_PLUGIN_ROOT", root.display().to_string())
+                .env("CLAW_PLUGIN_ROOT", root.display().to_string());
         }
 
         let mut child = process.spawn()?;

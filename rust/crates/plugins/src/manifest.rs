@@ -147,6 +147,15 @@ pub(crate) fn plugin_manifest_path(root: &Path) -> Result<PathBuf, PluginError> 
         return Ok(packaged_path);
     }
 
+    let legacy_path = root.join(".claw-plugin/plugin.json");
+    if legacy_path.exists() {
+        eprintln!(
+            "[fraude] deprecated: plugin at {} uses .claw-plugin/; rename to .fraude-plugin/ to silence this warning",
+            legacy_path.display()
+        );
+        return Ok(legacy_path);
+    }
+
     Err(PluginError::NotFound(format!(
         "plugin manifest not found at {} or {}",
         direct_path.display(),

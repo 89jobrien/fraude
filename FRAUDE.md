@@ -1,6 +1,6 @@
-# CLAW.md
+# FRAUDE.md
 
-This file provides guidance to Claw Code when working with code in this repository.
+This file provides guidance to Fraude when working with code in this repository.
 
 ## Detected stack
 
@@ -21,5 +21,5 @@ This file provides guidance to Claw Code when working with code in this reposito
 ## Working agreement
 
 - Prefer small, reviewable changes and keep generated bootstrap files aligned with actual repo workflows.
-- Keep shared defaults in `.claw.json`; reserve `.claw/settings.local.json` for machine-local overrides.
-- Do not overwrite existing `CLAW.md` content automatically; update it intentionally when repo workflows change.
+- Keep shared defaults in `.fraude.json`; reserve `.fraude/settings.local.json` for machine-local overrides.
+- Do not overwrite existing `FRAUDE.md` content automatically; update it intentionally when repo workflows change.

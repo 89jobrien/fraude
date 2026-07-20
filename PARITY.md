@@ -12,7 +12,7 @@ The Rust port has a good foundation for:
 - local conversation/session state
 - a core tool loop
 - MCP stdio/bootstrap support
-- CLAW.md discovery
+- FRAUDE.md discovery
 - a small but usable built-in tool set
 
 It is **not feature-parity** with the TypeScript CLI.
@@ -126,7 +126,7 @@ Evidence:
 Evidence:
 
 - `Skill` tool in `rust/crates/tools/src/lib.rs` resolves and reads local `SKILL.md` files.
-- CLAW.md discovery is implemented in `rust/crates/runtime/src/prompt.rs`.
+- FRAUDE.md discovery is implemented in `rust/crates/runtime/src/prompt.rs`.
 - Rust supports `/memory` and `/init` via `rust/crates/commands/src/lib.rs` and `rust/crates/fraude-cli/src/main.rs`.
 
 ### Missing or broken in Rust
