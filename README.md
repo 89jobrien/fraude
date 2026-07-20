@@ -16,18 +16,18 @@ The `fraude` binary is built from the `rust/` workspace.
 
 ### Crates
 
-| Crate | Role |
-|---|---|
-| `fraude-cli` | User-facing binary: REPL, prompt, session management, TUI dashboard |
-| `runtime` | Sessions, config, permissions, prompts, tool loop |
-| `api` | Provider clients (Anthropic, Grok, OAuth) and streaming |
-| `tools` | Built-in tool implementations (shell, file I/O, search, web, todos) |
-| `commands` | Slash-command registry and handlers |
-| `plugins` | Plugin discovery, registry, manifest parsing, and lifecycle |
-| `lsp` | Language-server protocol types and process helpers |
-| `server` | Supporting service layer |
+| Crate            | Role                                                                       |
+| ---------------- | -------------------------------------------------------------------------- |
+| `fraude-cli`     | User-facing binary: REPL, prompt, session management, TUI dashboard        |
+| `runtime`        | Sessions, config, permissions, prompts, tool loop                          |
+| `api`            | Provider clients (Anthropic, Grok, OAuth) and streaming                    |
+| `tools`          | Built-in tool implementations (shell, file I/O, search, web, todos)        |
+| `commands`       | Slash-command registry and handlers                                        |
+| `plugins`        | Plugin discovery, registry, manifest parsing, and lifecycle                |
+| `lsp`            | Language-server protocol types and process helpers                         |
+| `server`         | Supporting service layer                                                   |
 | `compat-harness` | Compatibility tooling for extracting manifests from existing installations |
-| `macros` | Proc-macro utilities |
+| `macros`         | Proc-macro utilities                                                       |
 
 ### Build
 
@@ -70,13 +70,13 @@ cargo test --workspace -- --test-threads=1
 
 ## Configuration
 
-| File | Scope |
-|---|---|
-| `~/.fraude/settings.json` | User-level defaults |
-| `.fraude/settings.json` | Project-level config |
-| `.fraude/settings.local.json` | Machine-local overrides (gitignore this) |
-| `.fraude.json` | Legacy single-file config |
-| `FRAUDE.md` | Workspace instruction file loaded into context |
+| File                          | Scope                                          |
+| ----------------------------- | ---------------------------------------------- |
+| `~/.fraude/settings.json`     | User-level defaults                            |
+| `.fraude/settings.json`       | Project-level config                           |
+| `.fraude/settings.local.json` | Machine-local overrides (gitignore this)       |
+| `.fraude.json`                | Legacy single-file config                      |
+| `FRAUDE.md`                   | Workspace instruction file loaded into context |
 
 `FRAUDE_CONFIG_HOME` overrides the user config directory.
 

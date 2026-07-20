@@ -187,5 +187,5 @@ Read on manager creation; written on enable/disable/install/uninstall.
   their cwd. No sandboxing.
 - **No Hot Reload**: Plugin changes (manifest edits, binary updates) require
   re-discovery. No live updates.
-- **Hardcoded Environment Variable Names**: CLAW\_\* names not configurable.
+- **Hardcoded Environment Variable Names**: FRAUDE\_\* names not configurable.
   Plugin env schema fixed.
