@@ -4749,6 +4749,36 @@ mod tests {
         assert_eq!(normalize_permission_mode("unknown"), None);
     }
 
+    #[allow(unsafe_code)]
+    #[test]
+    fn default_permission_mode_reads_env_var() {
+        use super::default_permission_mode;
+
+        // Serialize env-var tests to avoid cross-test pollution.
+        static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+        let _guard = LOCK.get_or_init(|| std::sync::Mutex::new(())).lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+
+        // No env var → defaults to danger-full-access.
+        unsafe { std::env::remove_var("FRAUDE_PERMISSION_MODE") };
+        assert_eq!(default_permission_mode(), PermissionMode::DangerFullAccess);
+
+        // Valid known value → correctly parsed.
+        unsafe { std::env::set_var("FRAUDE_PERMISSION_MODE", "read-only") };
+        assert_eq!(default_permission_mode(), PermissionMode::ReadOnly);
+
+        unsafe { std::env::set_var("FRAUDE_PERMISSION_MODE", "workspace-write") };
+        assert_eq!(default_permission_mode(), PermissionMode::WorkspaceWrite);
+
+        unsafe { std::env::set_var("FRAUDE_PERMISSION_MODE", "danger-full-access") };
+        assert_eq!(default_permission_mode(), PermissionMode::DangerFullAccess);
+
+        // Unknown value → falls back to danger-full-access without panicking.
+        unsafe { std::env::set_var("FRAUDE_PERMISSION_MODE", "totally-unknown-mode") };
+        assert_eq!(default_permission_mode(), PermissionMode::DangerFullAccess);
+
+        unsafe { std::env::remove_var("FRAUDE_PERMISSION_MODE") };
+    }
+
     #[test]
     fn clear_command_requires_explicit_confirmation_flag() {
         assert_eq!(
