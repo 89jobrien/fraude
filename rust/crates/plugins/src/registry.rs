@@ -129,21 +129,29 @@ impl PluginRegistry {
         self.plugins.iter().map(RegisteredPlugin::summary).collect()
     }
 
+    /// Validates all enabled plugins. Call this once after building the registry
+    /// before using [`aggregated_hooks`] or [`aggregated_tools`].
+    pub fn validate_all(&self) -> Result<(), PluginError> {
+        for plugin in self.plugins.iter().filter(|plugin| plugin.is_enabled()) {
+            plugin.validate()?;
+        }
+        Ok(())
+    }
+
     pub fn aggregated_hooks(&self) -> Result<PluginHooks, PluginError> {
-        self.plugins
+        Ok(self
+            .plugins
             .iter()
             .filter(|plugin| plugin.is_enabled())
-            .try_fold(PluginHooks::default(), |acc, plugin| {
-                plugin.validate()?;
-                Ok(acc.merged_with(plugin.hooks()))
-            })
+            .fold(PluginHooks::default(), |acc, plugin| {
+                acc.merged_with(plugin.hooks())
+            }))
     }
 
     pub fn aggregated_tools(&self) -> Result<Vec<PluginTool>, PluginError> {
         let mut tools = Vec::new();
         let mut seen_names = BTreeMap::new();
         for plugin in self.plugins.iter().filter(|plugin| plugin.is_enabled()) {
-            plugin.validate()?;
             for tool in plugin.tools() {
                 if let Some(existing_plugin) =
                     seen_names.insert(tool.definition().name.clone(), tool.plugin_id().to_string())
@@ -162,7 +170,6 @@ impl PluginRegistry {
 
     pub fn initialize(&self) -> Result<(), PluginError> {
         for plugin in self.plugins.iter().filter(|plugin| plugin.is_enabled()) {
-            plugin.validate()?;
             plugin.initialize()?;
         }
         Ok(())

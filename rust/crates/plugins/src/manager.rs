@@ -15,9 +15,9 @@ use crate::registry::{
     InstalledPluginRecord, InstalledPluginRegistry, PluginRegistry, PluginSummary, RegisteredPlugin,
 };
 use crate::types::{
-    BUNDLED_MARKETPLACE, BuiltinPlugin, BundledPlugin, EXTERNAL_MARKETPLACE, ExternalPlugin,
-    Plugin, PluginDefinition, PluginInstallSource, PluginKind, PluginMetadata, builtin_plugins,
-    describe_install_source, plugin_id, resolve_hooks, resolve_lifecycle, resolve_tools,
+    BUNDLED_MARKETPLACE, EXTERNAL_MARKETPLACE, Plugin, PluginData, PluginDefinition,
+    PluginInstallSource, PluginKind, PluginMetadata, builtin_plugins, describe_install_source,
+    plugin_id, resolve_hooks, resolve_lifecycle, resolve_tools,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,7 +99,7 @@ impl PluginManager {
     }
 
     pub fn plugin_registry(&self) -> Result<PluginRegistry, PluginError> {
-        Ok(PluginRegistry::new(
+        let registry = PluginRegistry::new(
             self.discover_plugins()?
                 .into_iter()
                 .map(|plugin| {
@@ -107,7 +107,9 @@ impl PluginManager {
                     RegisteredPlugin::new(plugin, enabled)
                 })
                 .collect(),
-        ))
+        );
+        registry.validate_all()?;
+        Ok(registry)
     }
 
     pub fn list_plugins(&self) -> Result<Vec<PluginSummary>, PluginError> {
@@ -148,26 +150,12 @@ impl PluginManager {
 
         let id = plugin_id(&manifest.name, EXTERNAL_MARKETPLACE);
         let install_path = self.install_root().join(sanitize_plugin_id(&id));
-        if install_path.exists() {
-            fs::remove_dir_all(&install_path)?;
-        }
-        copy_dir_all(&staged_source, &install_path)?;
-        if cleanup_source {
-            let _ = fs::remove_dir_all(&staged_source);
-        }
+
+        copy_source_to_install_path(&staged_source, &install_path, cleanup_source)?;
 
         let now = unix_time_ms();
-        let record = InstalledPluginRecord {
-            kind: PluginKind::External,
-            id: id.clone(),
-            name: manifest.name,
-            version: manifest.version.clone(),
-            description: manifest.description,
-            install_path: install_path.clone(),
-            source: install_source,
-            installed_at_unix_ms: now,
-            updated_at_unix_ms: now,
-        };
+        let record =
+            build_external_record(&manifest, &id, install_path.clone(), install_source, now);
 
         let mut registry = self.load_registry()?;
         registry.plugins.insert(id.clone(), record);
@@ -388,27 +376,19 @@ impl PluginManager {
                 continue;
             }
 
-            if install_path.exists() {
-                fs::remove_dir_all(&install_path)?;
-            }
-            copy_dir_all(&source_root, &install_path)?;
+            copy_bundled_plugin(&source_root, &install_path)?;
 
             let installed_at_unix_ms =
                 existing_record.map_or(now, |record| record.installed_at_unix_ms);
-            registry.plugins.insert(
-                pid.clone(),
-                InstalledPluginRecord {
-                    kind: PluginKind::Bundled,
-                    id: pid,
-                    name: manifest.name,
-                    version: manifest.version,
-                    description: manifest.description,
-                    install_path,
-                    source: PluginInstallSource::LocalPath { path: source_root },
-                    installed_at_unix_ms,
-                    updated_at_unix_ms: now,
-                },
+            let record = build_bundled_record(
+                &manifest,
+                &pid,
+                install_path,
+                source_root,
+                now,
+                installed_at_unix_ms,
             );
+            registry.plugins.insert(pid.clone(), record);
             changed = true;
         }
 
@@ -498,6 +478,75 @@ impl PluginManager {
     }
 }
 
+/// Copies `staged_source` to `install_path`, replacing any existing directory.
+/// If `cleanup_source` is true, the staged source is removed after the copy.
+fn copy_source_to_install_path(
+    staged_source: &Path,
+    install_path: &Path,
+    cleanup_source: bool,
+) -> Result<(), PluginError> {
+    if install_path.exists() {
+        fs::remove_dir_all(install_path)?;
+    }
+    copy_dir_all(staged_source, install_path)?;
+    if cleanup_source {
+        let _ = fs::remove_dir_all(staged_source);
+    }
+    Ok(())
+}
+
+/// Builds an [`InstalledPluginRecord`] for a newly-installed external plugin.
+fn build_external_record(
+    manifest: &PluginManifest,
+    id: &str,
+    install_path: PathBuf,
+    source: PluginInstallSource,
+    now: u128,
+) -> InstalledPluginRecord {
+    InstalledPluginRecord {
+        kind: PluginKind::External,
+        id: id.to_string(),
+        name: manifest.name.clone(),
+        version: manifest.version.clone(),
+        description: manifest.description.clone(),
+        install_path,
+        source,
+        installed_at_unix_ms: now,
+        updated_at_unix_ms: now,
+    }
+}
+
+/// Copies a bundled plugin source directory to its install path, replacing any
+/// existing copy.
+fn copy_bundled_plugin(source_root: &Path, install_path: &Path) -> Result<(), PluginError> {
+    if install_path.exists() {
+        fs::remove_dir_all(install_path)?;
+    }
+    copy_dir_all(source_root, install_path)
+}
+
+/// Builds an [`InstalledPluginRecord`] for a bundled plugin sync operation.
+fn build_bundled_record(
+    manifest: &PluginManifest,
+    pid: &str,
+    install_path: PathBuf,
+    source_root: PathBuf,
+    now: u128,
+    installed_at_unix_ms: u128,
+) -> InstalledPluginRecord {
+    InstalledPluginRecord {
+        kind: PluginKind::Bundled,
+        id: pid.to_string(),
+        name: manifest.name.clone(),
+        version: manifest.version.clone(),
+        description: manifest.description.clone(),
+        install_path,
+        source: PluginInstallSource::LocalPath { path: source_root },
+        installed_at_unix_ms,
+        updated_at_unix_ms: now,
+    }
+}
+
 fn load_plugin_definition(
     root: &Path,
     kind: PluginKind,
@@ -518,25 +567,16 @@ fn load_plugin_definition(
     let hooks = resolve_hooks(root, &manifest.hooks);
     let lifecycle = resolve_lifecycle(root, &manifest.lifecycle);
     let tools = resolve_tools(root, &metadata.id, &metadata.name, &manifest.tools);
+    let data = PluginData {
+        metadata,
+        hooks,
+        lifecycle,
+        tools,
+    };
     Ok(match kind {
-        PluginKind::Builtin => PluginDefinition::Builtin(BuiltinPlugin {
-            metadata,
-            hooks,
-            lifecycle,
-            tools,
-        }),
-        PluginKind::Bundled => PluginDefinition::Bundled(BundledPlugin {
-            metadata,
-            hooks,
-            lifecycle,
-            tools,
-        }),
-        PluginKind::External => PluginDefinition::External(ExternalPlugin {
-            metadata,
-            hooks,
-            lifecycle,
-            tools,
-        }),
+        PluginKind::Builtin => PluginDefinition::Builtin(data),
+        PluginKind::Bundled => PluginDefinition::Bundled(data),
+        PluginKind::External => PluginDefinition::External(data),
     })
 }
 

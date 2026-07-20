@@ -16,7 +16,7 @@ pub use registry::{
     InstalledPluginRecord, InstalledPluginRegistry, PluginRegistry, PluginSummary, RegisteredPlugin,
 };
 pub use types::{
-    BuiltinPlugin, BundledPlugin, ExternalPlugin, Plugin, PluginDefinition, PluginInstallSource,
-    PluginKind, PluginMetadata, PluginPermission, PluginTool, PluginToolDefinition,
-    PluginToolPermission, builtin_plugins,
+    BuiltinPlugin, BundledPlugin, ExternalPlugin, Plugin, PluginData, PluginDefinition,
+    PluginInstallSource, PluginKind, PluginMetadata, PluginPermission, PluginTool,
+    PluginToolDefinition, PluginToolPermission, builtin_plugins,
 };

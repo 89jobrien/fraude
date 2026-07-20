@@ -84,7 +84,11 @@ fn upstream_repo_candidates_with_override(
         candidates.push(ancestor.join("claw-code")); // compat: upstream may not be renamed yet
     }
     // conventional vendor/reference locations
-    candidates.push(primary_repo_root.join("reference-source").join("fraude-code"));
+    candidates.push(
+        primary_repo_root
+            .join("reference-source")
+            .join("fraude-code"),
+    );
     candidates.push(primary_repo_root.join("vendor").join("fraude-code"));
     candidates.push(primary_repo_root.join("reference-source").join("claw-code"));
     candidates.push(primary_repo_root.join("vendor").join("claw-code"));

@@ -4759,7 +4759,10 @@ mod tests {
 
         // Serialize env-var tests to avoid cross-test pollution.
         static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
-        let _guard = LOCK.get_or_init(|| std::sync::Mutex::new(())).lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let _guard = LOCK
+            .get_or_init(|| std::sync::Mutex::new(()))
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
 
         // No env var → defaults to danger-full-access.
         unsafe { std::env::remove_var("FRAUDE_PERMISSION_MODE") };

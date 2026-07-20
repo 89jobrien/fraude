@@ -1071,7 +1071,10 @@ mod tests {
         let mut parser = super::OpenAiSseParser::new();
         let result = parser.push(b"data: [DONE]\n\n");
         assert!(result.is_ok());
-        assert!(result.unwrap().is_empty(), "[DONE] should produce no chunks");
+        assert!(
+            result.unwrap().is_empty(),
+            "[DONE] should produce no chunks"
+        );
     }
 
     #[test]
@@ -1081,7 +1084,9 @@ mod tests {
             "\n\n"
         );
         let mut parser = super::OpenAiSseParser::new();
-        let chunks = parser.push(frame.as_bytes()).expect("valid frame should parse");
+        let chunks = parser
+            .push(frame.as_bytes())
+            .expect("valid frame should parse");
         assert_eq!(chunks.len(), 1);
     }
 
@@ -1089,7 +1094,9 @@ mod tests {
     fn sse_parser_comment_lines_are_ignored() {
         let frame = ": keep-alive\n\ndata: [DONE]\n\n";
         let mut parser = super::OpenAiSseParser::new();
-        let result = parser.push(frame.as_bytes()).expect("comment frame should not error");
+        let result = parser
+            .push(frame.as_bytes())
+            .expect("comment frame should not error");
         assert!(result.is_empty());
     }
 }

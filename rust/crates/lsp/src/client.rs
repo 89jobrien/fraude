@@ -574,7 +574,7 @@ mod tests {
         // Must not panic. The result is either Ok(Some(null-ish)) or a Json error;
         // either is acceptable as long as it returns without panicking.
         match result {
-            Ok(_) => {} // parser accepted empty body (e.g. treated as null)
+            Ok(_) => {}                  // parser accepted empty body (e.g. treated as null)
             Err(LspError::Json(_)) => {} // expected: empty slice is not valid JSON
             Err(other) => panic!("unexpected error for zero-length body: {other}"),
         }
@@ -585,8 +585,7 @@ mod tests {
         // Two valid messages concatenated — should parse the first one only.
         let body1 = r#"{"method":"a"}"#;
         let body2 = r#"{"method":"b"}"#;
-        let mut combined =
-            format!("Content-Length: {}\r\n\r\n{}", body1.len(), body1).into_bytes();
+        let mut combined = format!("Content-Length: {}\r\n\r\n{}", body1.len(), body1).into_bytes();
         combined.extend_from_slice(
             format!("Content-Length: {}\r\n\r\n{}", body2.len(), body2).as_bytes(),
         );
