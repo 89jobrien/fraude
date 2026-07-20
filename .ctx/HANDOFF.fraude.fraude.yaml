@@ -1,8 +1,30 @@
 project: fraude
 id: fraude
 updated: 2026-07-20
-items: []
+items:
+  - id: uncommitted-work
+    name: uncommitted-work
+    priority: P1
+    status: open
+    title: Uncommitted changes (1 file)
+    description: |-
+      Working tree has uncommitted changes:
+      .ctx/HANDOFF.fraude.fraude.yaml
+    files:
+      - .ctx/HANDOFF.fraude.fraude.yaml
 log:
+  - date: "20260720.120246"
+    summary: done=10 running=0 pending=0 blocked=0
+    commits:
+      - 63ffb389bd6f155be0702a3f45e1f02a44cf6ef4
+      - 1a2926bdd60f3d7e62d9eb26f865a135f7303b51
+      - 2aaa9a324d0db961b74bc295e2b4ce293cb0bcaf
+      - 5ca8b09c7c24ed0132d0d6d1eacbd7f4ebc3772c
+      - df91ce5d888d3f6630760782c12a3f2db467d38e
+      - fc80ebeb68b5ea40e30b6157b53c2dac41ecf6ab
+      - e5b3333d207759ce1c76f5f237f44b799b7061c6
+      - f7c298efa6e5d0092b0b3bc1be03ac5c2ff65d3b
+      - 40445168fbe913dd2728a101ae9a705cbaff57b9
+      - 8f36e20c6e1f9af4d23e365dd799b98ab0c8c285
   - date: "20260713.225900"
     summary: done=10 running=0 pending=0 blocked=0
-    commits: []
